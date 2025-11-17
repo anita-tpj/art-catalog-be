@@ -9,7 +9,7 @@ export async function getArtists(req: Request, res: Response) {
 export async function getArtist(req: Request, res: Response) {
   const id = Number(req.params.id);
 
-  if (Number.isNaN(id)) {
+  if (!Number.isInteger(id) || id <= 0) {
     const error: any = new Error("Invalid artist id");
     error.statusCode = 400;
     throw error;
@@ -34,7 +34,7 @@ export async function createArtist(req: Request, res: Response) {
 export async function updateArtist(req: Request, res: Response) {
   const id = Number(req.params.id);
 
-  if (Number.isNaN(id)) {
+  if (!Number.isInteger(id) || id <= 0) {
     const error: any = new Error("Invalid artist id");
     error.statusCode = 400;
     throw error;
@@ -54,7 +54,7 @@ export async function updateArtist(req: Request, res: Response) {
 
 export async function deleteArtist(req: Request, res: Response) {
   const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
+  if (!Number.isInteger(id) || id <= 0) {
     const error: any = new Error("Invalid artist id");
     error.statusCode = 400;
     throw error;

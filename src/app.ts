@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import prisma from "./prisma";
 import artistsRouter from "./routes/artists.routes";
+import artWorkRouter from "./routes/artwork.routes";
 import "express-async-errors";
 import { errorHandler } from "./middlewares/errorHandler";
 import logger from "./libs/logger";
@@ -15,6 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/artists", artistsRouter);
+app.use("/api/artworks", artWorkRouter);
 app.use(errorHandler);
 
 app.get("/", (_req, res) => {
