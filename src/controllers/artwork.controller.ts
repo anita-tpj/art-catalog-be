@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import * as artWorkService from "../services/artwork.service";
+import * as artworkService from "../services/artwork.service";
 
-export async function getArtWorks(req: Request, res: Response) {
-  const artWorks = await artWorkService.getAllArtWorks();
-  res.json(artWorks);
+export async function getArtworks(req: Request, res: Response) {
+  const artworks = await artworkService.getAllArtworks();
+  res.json(artworks);
 }
 
-export async function getArtWork(req: Request, res: Response) {
+export async function getArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -15,23 +15,23 @@ export async function getArtWork(req: Request, res: Response) {
     throw error;
   }
 
-  const artWork = await artWorkService.getArtWorkById(id);
+  const artwork = await artworkService.getArtworkById(id);
 
-  if (!artWork) {
+  if (!artwork) {
     const error: any = new Error("Art work not found");
     error.statusCode = 404;
     throw error;
   }
 
-  res.json(artWork);
+  res.json(artwork);
 }
 
-export async function createArtWork(req: Request, res: Response) {
-  const artWork = await artWorkService.createArtWork(req.body);
-  res.status(201).json(artWork);
+export async function createArtwork(req: Request, res: Response) {
+  const artwork = await artworkService.createArtwork(req.body);
+  res.status(201).json(artwork);
 }
 
-export async function updateArtWork(req: Request, res: Response) {
+export async function updateArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -40,7 +40,7 @@ export async function updateArtWork(req: Request, res: Response) {
     throw error;
   }
 
-  const existing = await artWorkService.getArtWorkById(id);
+  const existing = await artworkService.getArtworkById(id);
 
   if (!existing) {
     const error: any = new Error("Art work not found");
@@ -48,12 +48,12 @@ export async function updateArtWork(req: Request, res: Response) {
     throw error;
   }
 
-  const updated = await artWorkService.updateArtWork(id, req.body);
+  const updated = await artworkService.updateArtwork(id, req.body);
 
   res.json(updated);
 }
 
-export async function deleteArtWork(req: Request, res: Response) {
+export async function deleteArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -62,13 +62,13 @@ export async function deleteArtWork(req: Request, res: Response) {
     throw error;
   }
 
-  const existing = await artWorkService.getArtWorkById(id);
+  const existing = await artworkService.getArtworkById(id);
 
   if (!existing) {
     const error: any = new Error("Art work not found");
     error.statusCode = 404;
     throw error;
   }
-  await artWorkService.deleteArtWork(id);
+  await artworkService.deleteArtwork(id);
   res.status(204).send();
 }
