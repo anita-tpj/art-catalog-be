@@ -1,9 +1,32 @@
 import { Request, Response } from "express";
 import * as artistService from "../services/artist.service";
 
+// export async function getArtists(req: Request, res: Response) {
+//   const artists = await artistService.getAllArtists();
+//   res.json(artists);
+// }
+
 export async function getArtists(req: Request, res: Response) {
-  const artists = await artistService.getAllArtists();
-  res.json(artists);
+  const page = Number(req.query.page) || 1;
+  const pageSize = Number(req.query.pageSize) || 10;
+
+  const safePage = page < 1 ? 1 : page;
+  const safePageSize = pageSize < 1 ? 10 : pageSize;
+
+  const { items, total } = await artistService.getPaginatedArtists(
+    safePage,
+    safePageSize
+  );
+
+  res.json({
+    items,
+    meta: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+      totalPages: Math.ceil(total / safePageSize),
+    },
+  });
 }
 
 export async function getArtist(req: Request, res: Response) {

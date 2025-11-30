@@ -14,6 +14,25 @@ export async function getArtistById(id: number) {
   });
 }
 
+export async function getPaginatedArtists(page: number, pageSize: number) {
+  const skip = (page - 1) * pageSize;
+
+  const [items, total] = await Promise.all([
+    prisma.artist.findMany({
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: "desc" },
+      include: { artworks: true },
+    }),
+    prisma.artist.count(),
+  ]);
+
+  return {
+    items,
+    total,
+  };
+}
+
 export async function createArtist(data: CreateArtistDTO) {
   return prisma.artist.create({
     data,

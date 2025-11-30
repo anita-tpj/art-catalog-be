@@ -1,9 +1,32 @@
 import { Request, Response } from "express";
 import * as artworkService from "../services/artwork.service";
 
+// export async function getArtworks(req: Request, res: Response) {
+//   const artworks = await artworkService.getAllArtworks();
+//   res.json(artworks);
+// }
+
 export async function getArtworks(req: Request, res: Response) {
-  const artworks = await artworkService.getAllArtworks();
-  res.json(artworks);
+  const page = Number(req.query.page) || 1;
+  const pageSize = Number(req.query.pageSize) || 10;
+
+  const safePage = page < 1 ? 1 : page;
+  const safePageSize = pageSize < 1 ? 10 : pageSize;
+
+  const { items, total } = await artworkService.getPaginatedArtworks(
+    safePage,
+    safePageSize
+  );
+
+  res.json({
+    items,
+    meta: {
+      page: safePage,
+      pageSize: safePageSize,
+      total,
+      totalPages: Math.ceil(total / safePageSize),
+    },
+  });
 }
 
 export async function getArtwork(req: Request, res: Response) {
