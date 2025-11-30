@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as artworkService from "../services/artwork.service";
+import { ArtworkListQuerySchema } from "../dtos/artwork.dto";
 
 // export async function getArtworks(req: Request, res: Response) {
 //   const artworks = await artworkService.getAllArtworks();
@@ -7,24 +8,17 @@ import * as artworkService from "../services/artwork.service";
 // }
 
 export async function getArtworks(req: Request, res: Response) {
-  const page = Number(req.query.page) || 1;
-  const pageSize = Number(req.query.pageSize) || 10;
+  const query = ArtworkListQuerySchema.parse(req.query);
 
-  const safePage = page < 1 ? 1 : page;
-  const safePageSize = pageSize < 1 ? 10 : pageSize;
-
-  const { items, total } = await artworkService.getPaginatedArtworks(
-    safePage,
-    safePageSize
-  );
+  const { items, total } = await artworkService.getPaginatedArtworks(query);
 
   res.json({
     items,
     meta: {
-      page: safePage,
-      pageSize: safePageSize,
+      page: query.page,
+      pageSize: query.pageSize,
       total,
-      totalPages: Math.ceil(total / safePageSize),
+      totalPages: Math.ceil(total / query.pageSize),
     },
   });
 }

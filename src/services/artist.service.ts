@@ -1,5 +1,12 @@
-import { CreateArtistDTO, UpdateArtistDTO } from "../dtos/artist.dto";
+import { Prisma } from "@prisma/client";
+import {
+  ArtistListQueryDTO,
+  CreateArtistDTO,
+  UpdateArtistDTO,
+} from "../dtos/artist.dto";
 import prisma from "../prisma";
+
+export type ArtistQuery = ArtistListQueryDTO;
 
 export async function getAllArtists() {
   return prisma.artist.findMany({
@@ -14,17 +21,28 @@ export async function getArtistById(id: number) {
   });
 }
 
-export async function getPaginatedArtists(page: number, pageSize: number) {
+export async function getPaginatedArtists(query: ArtistQuery) {
+  const { page, pageSize, search } = query;
   const skip = (page - 1) * pageSize;
+
+  const where: Prisma.ArtistWhereInput = {};
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { country: { contains: search, mode: "insensitive" } },
+    ];
+  }
 
   const [items, total] = await Promise.all([
     prisma.artist.findMany({
       skip,
       take: pageSize,
+      where,
       orderBy: { createdAt: "desc" },
       include: { artworks: true },
     }),
-    prisma.artist.count(),
+    prisma.artist.count({ where }),
   ]);
 
   return {
