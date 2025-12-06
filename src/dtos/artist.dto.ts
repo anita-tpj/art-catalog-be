@@ -6,6 +6,8 @@ export const createArtistSchema = z.object({
   country: z.string().optional(),
   birthYear: z.number().int().optional(),
   deathYear: z.number().int().optional(),
+  avatarUrl: z.string().url("Must be a valid URL").optional(),
+  avatarPublicId: z.string().optional(),
 });
 
 export const ArtistListQuerySchema = z.object({

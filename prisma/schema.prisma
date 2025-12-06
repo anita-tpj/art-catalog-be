@@ -15,12 +15,14 @@ datasource db {
 }
 
 model Artist {
-  id        Int     @id @default(autoincrement())
-  name      String
-  bio       String? @db.Text
-  country   String?
-  birthYear Int?
-  deathYear Int?
+  id             Int     @id @default(autoincrement())
+  name           String
+  bio            String? @db.Text
+  country        String?
+  birthYear      Int?
+  deathYear      Int?
+  avatarUrl      String?
+  avatarPublicId String?
 
   artworks Artwork[]
 
@@ -29,11 +31,12 @@ model Artist {
 }
 
 model Artwork {
-  id          Int     @id @default(autoincrement())
-  title       String
-  year        Int?
-  description String? @db.Text
-  imageUrl    String?
+  id            Int     @id @default(autoincrement())
+  title         String
+  year          Int?
+  description   String? @db.Text
+  imageUrl      String?
+  imagePublicId String?
 
   artist   Artist @relation(fields: [artistId], references: [id])
   artistId Int
