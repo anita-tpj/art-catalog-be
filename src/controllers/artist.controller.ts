@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as artistService from "../services/artist.service";
-import { ArtistListQuerySchema } from "../dtos/artist.dto";
+import { ArtistListQuerySchema, createArtistSchema } from "../dtos/artist.dto";
 
 // export async function getArtists(req: Request, res: Response) {
 //   const artists = await artistService.getAllArtists();
@@ -45,7 +45,9 @@ export async function getArtist(req: Request, res: Response) {
 }
 
 export async function createArtist(req: Request, res: Response) {
-  const artist = await artistService.createArtist(req.body);
+  const payload = createArtistSchema.parse(req.body);
+
+  const artist = await artistService.createArtist(payload);
   res.status(201).json(artist);
 }
 

@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import * as artworkService from "../services/artwork.service";
-import { ArtworkListQuerySchema } from "../dtos/artwork.dto";
+import {
+  ArtworkListQuerySchema,
+  createArtworkSchema,
+  updateArtworkSchema,
+} from "../dtos/artwork.dto";
 
 // export async function getArtworks(req: Request, res: Response) {
 //   const artworks = await artworkService.getAllArtworks();
@@ -44,7 +48,9 @@ export async function getArtwork(req: Request, res: Response) {
 }
 
 export async function createArtwork(req: Request, res: Response) {
-  const artwork = await artworkService.createArtwork(req.body);
+  const payload = createArtworkSchema.parse(req.body);
+
+  const artwork = await artworkService.createArtwork(payload);
   res.status(201).json(artwork);
 }
 
@@ -57,15 +63,9 @@ export async function updateArtwork(req: Request, res: Response) {
     throw error;
   }
 
-  const existing = await artworkService.getArtworkById(id);
+  const payload = updateArtworkSchema.parse(req.body);
 
-  if (!existing) {
-    const error: any = new Error("Art work not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const updated = await artworkService.updateArtwork(id, req.body);
+  const updated = await artworkService.updateArtwork(id, payload);
 
   res.json(updated);
 }
@@ -79,13 +79,7 @@ export async function deleteArtwork(req: Request, res: Response) {
     throw error;
   }
 
-  const existing = await artworkService.getArtworkById(id);
-
-  if (!existing) {
-    const error: any = new Error("Art work not found");
-    error.statusCode = 404;
-    throw error;
-  }
   await artworkService.deleteArtwork(id);
+
   res.status(204).send();
 }
