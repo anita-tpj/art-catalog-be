@@ -31,12 +31,18 @@ model Artist {
 }
 
 model Artwork {
-  id            Int     @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   title         String
   year          Int?
-  description   String? @db.Text
+  description   String?              @db.Text
   imageUrl      String?
   imagePublicId String?
+  technique     ArtworkTechnique?
+  style         ArtworkStyle?
+  motive        ArtworkMotive?
+  orientation   ArtworkOrientation?
+  size          ArtworkStandardSize?
+  framed        Boolean              @default(false)
 
   artist   Artist @relation(fields: [artistId], references: [id])
   artistId Int
@@ -53,4 +59,73 @@ enum ArtworkCategory {
   DIGITAL
   PHOTOGRAPHY
   OTHER
+}
+
+enum ArtworkTechnique {
+  OIL
+  ACRYLIC
+  WATERCOLOR
+  GOUACHE
+  INK
+  MIXED_MEDIA
+  DIGITAL_PAINTING
+  PASTEL
+  PENCIL
+  CHARCOAL
+  PRINT
+  SPRAY_PAINT
+  COLLAGE
+  OTHER
+}
+
+enum ArtworkStyle {
+  REALISM
+  ABSTRACT
+  EXPRESSIONISM
+  IMPRESSIONISM
+  MINIMALISM
+  SURREALISM
+  POP_ART
+  CUBISM
+  CONTEMPORARY
+  STREET_ART
+  FIGURATIVE
+  CONCEPTUAL
+  MODERN
+  OTHER
+}
+
+enum ArtworkMotive {
+  PORTRAIT
+  LANDSCAPE
+  STILL_LIFE
+  ANIMALS
+  FIGURE
+  CITYSCAPE
+  NATURE
+  RELIGIOUS_MYTHOLOGICAL
+  FANTASY_SCI_FI
+  GEOMETRIC
+  TYPOGRAPHY
+  SOCIAL_POLITICAL
+  OTHER
+}
+
+enum ArtworkOrientation {
+  PORTRAIT
+  LANDSCAPE
+  SQUARE
+  PANORAMIC
+}
+
+enum ArtworkStandardSize {
+  SIZE_30x40
+  SIZE_40x50
+  SIZE_50x70
+  SIZE_60x80
+  SIZE_70x100
+  A4_21x29_7
+  A3_29_7x42
+  A2_42x59_4
+  CUSTOM
 }

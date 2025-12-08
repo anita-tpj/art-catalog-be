@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import * as artistService from "../services/artist.service";
 import { ArtistListQuerySchema, createArtistSchema } from "../dtos/artist.dto";
 
-// export async function getArtists(req: Request, res: Response) {
-//   const artists = await artistService.getAllArtists();
-//   res.json(artists);
-// }
+export async function getAllArtists(req: Request, res: Response) {
+  const artists = await artistService.getAllArtists();
+  res.json(artists);
+}
 
-export async function getArtists(req: Request, res: Response) {
+export async function getPaginatedArtists(req: Request, res: Response) {
   const page = Number(req.query.page) || 1;
   const query = ArtistListQuerySchema.parse(req.query);
 
