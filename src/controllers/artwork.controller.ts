@@ -6,12 +6,12 @@ import {
   updateArtworkSchema,
 } from "../dtos/artwork.dto";
 
-// export async function getArtworks(req: Request, res: Response) {
-//   const artworks = await artworkService.getAllArtworks();
-//   res.json(artworks);
-// }
+export async function getAllArtworks(req: Request, res: Response) {
+  const artworks = await artworkService.getAllArtworks();
+  res.json(artworks);
+}
 
-export async function getArtworks(req: Request, res: Response) {
+export async function getPaginatedArtworks(req: Request, res: Response) {
   const query = ArtworkListQuerySchema.parse(req.query);
 
   const { items, total } = await artworkService.getPaginatedArtworks(query);

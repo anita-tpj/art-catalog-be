@@ -1,4 +1,4 @@
-import { ArtworkCategory } from "@prisma/client";
+import { ArtworkCategory, ArtworkMotive, ArtworkOrientation, ArtworkStandardSize, ArtworkStyle, ArtworkTechnique } from "@prisma/client";
 import { z } from "zod";
 
 export const createArtworkSchema = z.object({
@@ -7,6 +7,12 @@ export const createArtworkSchema = z.object({
   imageUrl: z.string().url().optional(),
   imagePublicId: z.string().optional(),
   year: z.number().int().optional(),
+  technique: z.nativeEnum(ArtworkTechnique).optional(),
+  style: z.nativeEnum(ArtworkStyle).optional(),
+  motive: z.nativeEnum(ArtworkMotive).optional(),
+  orientation: z.nativeEnum(ArtworkOrientation).optional(),
+  size: z.nativeEnum(ArtworkStandardSize).optional(),
+  framed: z.boolean().default(false),
   artistId: z.number().int(),
   category: z.nativeEnum(ArtworkCategory),
 });
