@@ -1,3 +1,4 @@
+import { ArtworkCategory } from "@prisma/client";
 import { z } from "zod";
 
 export const createArtistSchema = z.object({
@@ -8,6 +9,7 @@ export const createArtistSchema = z.object({
   deathYear: z.number().int().optional(),
   avatarUrl: z.string().url("Must be a valid URL").optional(),
   avatarPublicId: z.string().optional(),
+  primaryCategory: z.nativeEnum(ArtworkCategory),
 });
 
 export const ArtistListQuerySchema = z.object({
