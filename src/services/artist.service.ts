@@ -23,7 +23,7 @@ export async function getArtistById(id: number) {
 }
 
 export async function getPaginatedArtists(query: ArtistQuery) {
-  const { page, pageSize, search } = query;
+  const { page, pageSize, search, primaryCategory } = query;
   const skip = (page - 1) * pageSize;
 
   const where: Prisma.ArtistWhereInput = {};
@@ -34,6 +34,8 @@ export async function getPaginatedArtists(query: ArtistQuery) {
       { country: { contains: search, mode: "insensitive" } },
     ];
   }
+
+  if (primaryCategory) where.primaryCategory = primaryCategory;
 
   const [items, total] = await Promise.all([
     prisma.artist.findMany({
