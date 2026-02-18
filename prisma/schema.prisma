@@ -24,6 +24,8 @@ model Artist {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  inquiries Inquiry[]
 }
 
 model Artwork {
@@ -48,6 +50,31 @@ model Artwork {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  inquiries Inquiry[]
+}
+
+model Inquiry {
+  id      Int    @id @default(autoincrement())
+  name    String
+  email   String
+  message String
+
+  artistId  Int?
+  artworkId Int?
+
+  artist  Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  artwork Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+
+  status InquiryStatus @default(NEW)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([artistId])
+  @@index([artworkId])
 }
 
 enum ArtworkCategory {
@@ -130,4 +157,10 @@ enum ArtworkStandardSize {
   A3_29_7x42
   A2_42x59_4
   CUSTOM
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  ARCHIVED
 }
