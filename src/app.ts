@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import prisma from "./prisma";
+import adminDashBoardRouter from "./routes/adminDashboard.routes";
 import artistsRouter from "./routes/artists.routes";
 import artworkRouter from "./routes/artwork.routes";
 import uploadRouter from "./routes/upload.routes";
@@ -18,6 +19,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/api/admin/dashboard", adminDashBoardRouter);
 app.use("/api/artists", artistsRouter);
 app.use("/api/artworks", artworkRouter);
 app.use("/api/inquiries", inquiriesRouter);
