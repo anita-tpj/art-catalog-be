@@ -77,6 +77,30 @@ model Inquiry {
   @@index([artworkId])
 }
 
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  isActive     Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions AdminSession[]
+}
+
+model AdminSession {
+  id String @id @default(cuid())
+
+  adminUserId String
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+}
+
 enum ArtworkCategory {
   PAINTING
   SCULPTURE
@@ -163,4 +187,10 @@ enum InquiryStatus {
   NEW
   READ
   ARCHIVED
+}
+
+enum AdminRole {
+  ADMIN
+  EDITOR
+  VIEWER
 }
