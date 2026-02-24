@@ -1,16 +1,18 @@
-import path from "path";
-import fs from "fs/promises";
-import { existsSync } from "fs";
-import { v2 as cloudinary } from "cloudinary";
 import {
-  PrismaClient,
+  AdminRole,
   ArtworkCategory,
-  ArtworkTechnique,
-  ArtworkStyle,
   ArtworkMotive,
   ArtworkOrientation,
   ArtworkStandardSize,
+  ArtworkStyle,
+  ArtworkTechnique,
+  PrismaClient,
 } from "@prisma/client";
+import bcrypt from "bcrypt";
+import { v2 as cloudinary } from "cloudinary";
+import { existsSync } from "fs";
+import fs from "fs/promises";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -19,6 +21,10 @@ function requireEnv(name: string) {
   const v = process.env[name];
   if (!v) throw new Error(`Missing env var: ${name}`);
   return v;
+}
+
+function optionalEnv(name: string, fallback: string) {
+  return process.env[name] ?? fallback;
 }
 
 cloudinary.config({
@@ -37,7 +43,7 @@ type UploadResult = { url: string; publicId: string };
 
 async function uploadImageOrThrow(
   localPath: string,
-  publicId: string
+  publicId: string,
 ): Promise<UploadResult> {
   if (!existsSync(localPath)) {
     throw new Error(`Seed asset not found: ${localPath}`);
@@ -62,6 +68,29 @@ async function readFileBytes(localPath: string) {
 async function main() {
   console.log("🌱 Seeding database (with Cloudinary uploads)...");
 
+  // 0) Ensure admin user (idempotent)
+  const adminEmail = optionalEnv("ADMIN_EMAIL", "admin@artcatalog.local");
+  const adminPassword = optionalEnv("ADMIN_PASSWORD", "admin12345");
+
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+  await prisma.adminUser.upsert({
+    where: { email: adminEmail },
+    update: {
+      passwordHash,
+      role: AdminRole.ADMIN,
+      isActive: true,
+    },
+    create: {
+      email: adminEmail,
+      passwordHash,
+      role: AdminRole.ADMIN,
+      isActive: true,
+    },
+  });
+
+  console.log(`✅ Admin ensured: ${adminEmail}`);
+
   // 1) Cleanup (dev-friendly)
   await prisma.artwork.deleteMany();
   await prisma.artist.deleteMany();
@@ -81,19 +110,19 @@ async function main() {
 
   const anaAvatar = await uploadImageOrThrow(
     anaAvatarPath,
-    "artists/ana-petrovic"
+    "artists/ana-petrovic",
   );
   const marcoAvatar = await uploadImageOrThrow(
     marcoAvatarPath,
-    "artists/marco-rossi"
+    "artists/marco-rossi",
   );
   const sofiaAvatar = await uploadImageOrThrow(
     sofiaAvatarPath,
-    "artists/sofia-muller"
+    "artists/sofia-muller",
   );
   const mariaAvatar = await uploadImageOrThrow(
     mariaAvatarPath,
-    "artists/maria-mudra"
+    "artists/maria-mudra",
   );
 
   // 3) Create artists
