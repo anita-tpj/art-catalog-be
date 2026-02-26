@@ -18,9 +18,15 @@ dotenv.config();
 
 const app = express();
 
+// IMPORTANT for secure cookies behind Render proxy
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
   .split(",")
-  .map((s) => s.trim());
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // Middleware
 app.use(
@@ -32,10 +38,12 @@ app.use(
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
-  }),
+  })
 );
+
 app.use(express.json());
 app.use(cookieParser());
+
 app.use("/api/auth", authAdminRouter);
 
 app.use("/api/admin/dashboard", requireRoles(["ADMIN"]), adminDashBoardRouter);
@@ -44,13 +52,22 @@ app.use("/api/artworks", artworkRouter);
 app.use("/api/inquiries", inquiriesRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/health", healthRouter);
+
+// CORS error handler (nice-to-have)
+app.use((err: any, _req: any, res: any, next: any) => {
+  if (err?.message?.startsWith("CORS blocked for origin:")) {
+    return res.status(403).json({ message: err.message });
+  }
+  next(err);
+});
+
 app.use(errorHandler);
 
 app.get("/", (_req, res) => {
   res.send("ArtCatalog API running");
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`);
+const port = process.env.PORT ? Number(process.env.PORT) : 5000;
+app.listen(port, "0.0.0.0", () => {
+  logger.info(`🚀 Server running on port ${port}`);
 });

@@ -17,7 +17,7 @@ export function setAdminSessionCookie(res: Response, sessionId: string) {
   res.cookie(ADMIN_SESSION_COOKIE, sessionId, {
     httpOnly: true,
     secure: isProd, // prod: true (HTTPS), dev: false
-    sameSite: "lax",
+    sameSite: isProd ? "none" : "lax", // IMPORTANT: cross-site cookie in prod
     maxAge: maxAgeMs,
     path: "/",
   });
@@ -29,7 +29,7 @@ export function clearAdminSessionCookie(res: Response) {
   res.clearCookie(ADMIN_SESSION_COOKIE, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "lax",
+    sameSite: isProd ? "none" : "lax",
     path: "/",
   });
 }
