@@ -4,8 +4,9 @@ import {
   CreateArtistDTO,
   UpdateArtistDTO,
 } from "../dtos/artist.dto";
-import prisma from "../prisma";
 import { deleteImage } from "../libs/cloudinary";
+import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
+import prisma from "../prisma";
 
 export type ArtistQuery = ArtistListQueryDTO;
 
@@ -55,8 +56,10 @@ export async function getPaginatedArtists(query: ArtistQuery) {
 }
 
 export async function createArtist(data: CreateArtistDTO) {
+  const createData = nullifyUndefined({ ...data }) as Prisma.ArtistCreateInput;
+
   return prisma.artist.create({
-    data,
+    data: createData,
   });
 }
 
@@ -88,9 +91,11 @@ export async function updateArtist(id: number, data: UpdateArtistDTO) {
     }
   }
 
+  const updateData = stripUndefined({ ...data }) as Prisma.ArtistUpdateInput;
+
   return prisma.artist.update({
     where: { id },
-    data,
+    data: updateData,
   });
 }
 

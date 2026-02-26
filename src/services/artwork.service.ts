@@ -1,11 +1,12 @@
 import { Prisma } from "@prisma/client";
 import {
+  ArtworkListQueryDTO,
   CreateArtworkDTO,
   UpdateArtworkDTO,
-  ArtworkListQueryDTO,
 } from "../dtos/artwork.dto";
-import prisma from "../prisma";
 import { deleteImage } from "../libs/cloudinary";
+import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
+import prisma from "../prisma";
 
 export type ArtworkQuery = ArtworkListQueryDTO;
 
@@ -62,8 +63,18 @@ export async function getPaginatedArtworks(query: ArtworkQuery) {
 }
 
 export async function createArtwork(data: CreateArtworkDTO) {
+  const { artistId, ...rest } = data;
+
+  const createData: Prisma.ArtworkCreateInput = {
+    ...(nullifyUndefined({ ...rest }) as unknown as Omit<
+      Prisma.ArtworkCreateInput,
+      "artist"
+    >),
+    artist: { connect: { id: artistId } },
+  };
+
   return prisma.artwork.create({
-    data,
+    data: createData,
   });
 }
 
@@ -96,9 +107,19 @@ export async function updateArtwork(id: number, data: UpdateArtworkDTO) {
   }
 
   // Update the DB record with new fields including new image URL/publicId
+  // Build update payload without undefined keys
+  // Also handle artist change via relation connect (avoid artistId: never issues)
+  const { artistId, ...rest } = data as any;
+
+  const updateData: any = stripUndefined({ ...rest });
+
+  if (artistId !== undefined) {
+    updateData.artist = { connect: { id: artistId } };
+  }
+
   return prisma.artwork.update({
     where: { id },
-    data,
+    data: updateData,
   });
 }
 
@@ -122,7 +143,7 @@ export async function deleteArtwork(id: number) {
     } catch (err) {
       console.error(
         "Failed to delete Cloudinary image on artwork delete:",
-        err
+        err,
       );
     }
   }
