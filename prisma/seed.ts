@@ -66,6 +66,11 @@ async function readFileBytes(localPath: string) {
 }
 
 async function main() {
+  const artistsCount = await prisma.artist.count();
+  if (artistsCount > 0) {
+    console.log("🌱 Seed skipped (DB already has artists).");
+    return;
+  }
   console.log("🌱 Seeding database (with Cloudinary uploads)...");
 
   // 0) Ensure admin user (idempotent)
@@ -272,7 +277,7 @@ async function main() {
         year: 2020,
         description: "Minimalist photograph of nature.",
         imageUrl: artwork5.url,
-        imagePublicId: artwork4.publicId,
+        imagePublicId: artwork5.publicId,
 
         // technique optional for photo in your schema
         style: ArtworkStyle.MINIMALISM,
@@ -289,7 +294,7 @@ async function main() {
         year: 2020,
         description: "Minimalist photograph of flowers.",
         imageUrl: artwork6.url,
-        imagePublicId: artwork4.publicId,
+        imagePublicId: artwork6.publicId,
 
         // technique optional for photo in your schema
         style: ArtworkStyle.MINIMALISM,
