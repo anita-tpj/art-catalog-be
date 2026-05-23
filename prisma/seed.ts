@@ -66,14 +66,9 @@ async function readFileBytes(localPath: string) {
 }
 
 async function main() {
-  const artistsCount = await prisma.artist.count();
-  if (artistsCount > 0) {
-    console.log("🌱 Seed skipped (DB already has artists).");
-    return;
-  }
-  console.log("🌱 Seeding database (with Cloudinary uploads)...");
+    // 0) Ensure admin user (idempotent)
+  console.log("🌱 Ensuring admin user...");
 
-  // 0) Ensure admin user (idempotent)
   const adminEmail = optionalEnv("ADMIN_EMAIL", "admin@artcatalog.local");
   const adminPassword = optionalEnv("ADMIN_PASSWORD", "admin12345");
 
@@ -95,6 +90,13 @@ async function main() {
   });
 
   console.log(`✅ Admin ensured: ${adminEmail}`);
+  
+  const artistsCount = await prisma.artist.count();
+  if (artistsCount > 0) {
+    console.log("🌱 Seed skipped (DB already has artists).");
+    return;
+  }
+  console.log("🌱 Seeding database (with Cloudinary uploads)...");
 
   // 1) Cleanup (dev-friendly)
   await prisma.artwork.deleteMany();
