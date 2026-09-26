@@ -47,6 +47,59 @@ export async function getArtwork(req: Request, res: Response) {
   res.json(artwork);
 }
 
+export async function getAllPublishedArtworks(
+  req: Request,
+  res: Response,
+) {
+  const artworks = await artworkService.getAllPublishedArtworks();
+
+  res.json(artworks);
+}
+
+export async function getPaginatedPublishedArtworks(
+  req: Request,
+  res: Response,
+) {
+  const query = ArtworkListQuerySchema.parse(req.query);
+
+  const { items, total } =
+    await artworkService.getPaginatedPublishedArtworks(query);
+
+  res.json({
+    items,
+    meta: {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      totalPages: Math.ceil(total / query.pageSize),
+    },
+  });
+}
+
+export async function getPublishedArtwork(
+  req: Request,
+  res: Response,
+) {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    const error: any = new Error("Invalid art work ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const artwork =
+    await artworkService.getPublishedArtworkById(id);
+
+  if (!artwork) {
+    const error: any = new Error("Art work not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.json(artwork);
+}
+
 export async function createArtwork(req: Request, res: Response) {
   const payload = createArtworkSchema.parse(req.body);
 

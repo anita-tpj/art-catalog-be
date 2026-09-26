@@ -25,6 +25,9 @@ model Artist {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  status     ItemStatus     @default(DRAFT)
+  visibility ItemVisibility @default(PRIVATE)
+
   inquiries Inquiry[]
 }
 
@@ -50,6 +53,8 @@ model Artwork {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  status ItemStatus @default(DRAFT)
 
   inquiries Inquiry[]
 }
@@ -193,4 +198,15 @@ enum AdminRole {
   ADMIN
   EDITOR
   VIEWER
+}
+
+enum ItemStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ItemVisibility {
+  PUBLIC
+  PRIVATE
 }

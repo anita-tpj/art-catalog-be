@@ -8,7 +8,6 @@ export async function getAllArtists(req: Request, res: Response) {
 }
 
 export async function getPaginatedArtists(req: Request, res: Response) {
-  const page = Number(req.query.page) || 1;
   const query = ArtistListQuerySchema.parse(req.query);
 
   const { items, total } = await artistService.getPaginatedArtists(query);
@@ -22,6 +21,57 @@ export async function getPaginatedArtists(req: Request, res: Response) {
       totalPages: Math.ceil(total / query.pageSize),
     },
   });
+}
+
+export async function getAllPublishedArtists(
+  req: Request,
+  res: Response,
+) {
+  const artists = await artistService.getPublishedArtists();
+  res.json(artists);
+}
+
+export async function getPaginatedPublishedArtists(
+  req: Request,
+  res: Response,
+) {
+  const query = ArtistListQuerySchema.parse(req.query);
+
+  const { items, total } =
+    await artistService.getPaginatedPublishedArtists(query);
+
+  res.json({
+    items,
+    meta: {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      totalPages: Math.ceil(total / query.pageSize),
+    },
+  });
+}
+
+export async function getPublishedArtist(
+  req: Request,
+  res: Response,
+) {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    const error: any = new Error("Invalid artist id");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const artist = await artistService.getPublishedArtistById(id);
+
+  if (!artist) {
+    const error: any = new Error("Artist not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.json(artist);
 }
 
 export async function getArtist(req: Request, res: Response) {

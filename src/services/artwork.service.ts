@@ -1,4 +1,8 @@
-import { Prisma } from "@prisma/client";
+import {
+  ItemStatus,
+  ItemVisibility,
+  Prisma,
+} from "@prisma/client";
 import {
   ArtworkListQueryDTO,
   CreateArtworkDTO,
@@ -44,6 +48,89 @@ export async function getPaginatedArtworks(query: ArtworkQuery) {
 
   if (artistId) where.artistId = artistId;
   if (category) where.category = category;
+
+  const [items, total] = await Promise.all([
+    prisma.artwork.findMany({
+      skip,
+      take: pageSize,
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { artist: true },
+    }),
+    prisma.artwork.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+  };
+}
+
+export async function getAllPublishedArtworks() {
+  return prisma.artwork.findMany({
+    where: {
+      status: ItemStatus.PUBLISHED,
+      artist: {
+        status: ItemStatus.PUBLISHED,
+        visibility: ItemVisibility.PUBLIC,
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    include: { artist: true },
+  });
+}
+
+export async function getPublishedArtworkById(id: number) {
+  return prisma.artwork.findFirst({
+    where: {
+      id,
+      status: ItemStatus.PUBLISHED,
+      artist: {
+        status: ItemStatus.PUBLISHED,
+      },
+    },
+    include: { artist: true },
+  });
+}
+
+export async function getPaginatedPublishedArtworks(query: ArtworkQuery) {
+  const { page, pageSize, search, artistId, category } = query;
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.ArtworkWhereInput = {
+    status: ItemStatus.PUBLISHED,
+    artist: {
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
+    },
+  };
+
+  if (search) {
+    where.OR = [
+      {
+        title: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        artist: {
+          name: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      },
+    ];
+  }
+
+  if (artistId) {
+    where.artistId = artistId;
+  }
+
+  if (category) {
+    where.category = category;
+  }
 
   const [items, total] = await Promise.all([
     prisma.artwork.findMany({
