@@ -8,6 +8,7 @@ import {
   getPaginatedArtists,
   getPaginatedPublishedArtists,
   getPublishedArtist,
+  getPublishedArtistBySlug,
   updateArtist,
 } from "../controllers/artist.controller";
 
@@ -17,8 +18,10 @@ import { validateBody } from "../middlewares/validateRequest";
 const router = Router();
 
 // Public
+// Public
 router.get("/public/all", getAllPublishedArtists);
 router.get("/public", getPaginatedPublishedArtists);
+router.get("/public/profile/:slug", getPublishedArtistBySlug);
 router.get("/public/:id", getPublishedArtist);
 
 // Admin

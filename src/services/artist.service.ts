@@ -81,6 +81,49 @@ export async function getPublishedArtistById(id: number) {
   });
 }
 
+export async function getPublishedArtistBySlug(slug: string) {
+  const artist = await prisma.artist.findFirst({
+    where: {
+      slug,
+      status: ItemStatus.PUBLISHED,
+    },
+    include: {
+      _count: {
+        select: {
+          artworks: {
+            where: {
+              status: ItemStatus.PUBLISHED,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!artist) {
+    return null;
+  }
+
+  const artworks = await prisma.artwork.findMany({
+    where: {
+      artistId: artist.id,
+      status: ItemStatus.PUBLISHED,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    ...(artist.visibility === ItemVisibility.PUBLIC ? { take: 6 } : {}),
+  });
+
+  const { _count, ...artistData } = artist;
+
+  return {
+    ...artistData,
+    artworks,
+    artworksCount: _count.artworks,
+  };
+}
+
 export async function getPaginatedPublishedArtists(query: ArtistQuery) {
   const { page, pageSize, search, primaryCategory } = query;
   const skip = (page - 1) * pageSize;
@@ -101,16 +144,20 @@ export async function getPaginatedPublishedArtists(query: ArtistQuery) {
     where.primaryCategory = primaryCategory;
   }
 
-  const [items, total] = await Promise.all([
+  const [artists, total] = await Promise.all([
     prisma.artist.findMany({
       skip,
       take: pageSize,
       where,
       orderBy: { createdAt: "desc" },
       include: {
-        artworks: {
-          where: {
-            status: ItemStatus.PUBLISHED,
+        _count: {
+          select: {
+            artworks: {
+              where: {
+                status: ItemStatus.PUBLISHED,
+              },
+            },
           },
         },
       },
@@ -118,18 +165,79 @@ export async function getPaginatedPublishedArtists(query: ArtistQuery) {
     prisma.artist.count({ where }),
   ]);
 
+  const items = artists.map(({ _count, ...artist }) => ({
+    ...artist,
+    artworksCount: _count.artworks,
+  }));
+
   return {
     items,
     total,
   };
 }
 
-export async function createArtist(data: CreateArtistDTO) {
-  const createData = nullifyUndefined({ ...data }) as Prisma.ArtistCreateInput;
+const RESERVED_ARTIST_SLUGS = new Set([
+  "admin",
+  "api",
+  "artists",
+  "artworks",
+  "login",
+  "register",
+  "contact",
+  "dashboard",
+  "settings",
+]);
 
-  return prisma.artist.create({
-    data: createData,
-  });
+function validateArtistSlug(slug: string) {
+  if (RESERVED_ARTIST_SLUGS.has(slug)) {
+    const error: any = new Error("This slug is reserved");
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function requireSlugForPublish(slug: string | null | undefined) {
+  if (!slug) {
+    const error: any = new Error(
+      "Artist must have a slug before being published",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+export async function createArtist(data: CreateArtistDTO) {
+  if (data.slug) {
+    validateArtistSlug(data.slug);
+  }
+
+  const isPublished = data.status === ItemStatus.PUBLISHED;
+
+  if (isPublished) {
+    requireSlugForPublish(data.slug);
+  }
+
+  const createData = nullifyUndefined({
+    ...data,
+    slugLocked: isPublished,
+  }) as Prisma.ArtistCreateInput;
+
+  try {
+    return await prisma.artist.create({
+      data: createData,
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      const error: any = new Error("This slug is already taken");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    throw err;
+  }
 }
 
 export async function updateArtist(id: number, data: UpdateArtistDTO) {
@@ -138,6 +246,8 @@ export async function updateArtist(id: number, data: UpdateArtistDTO) {
     where: { id },
     select: {
       avatarPublicId: true,
+      slug: true,
+      slugLocked: true,
     },
   });
 
@@ -145,6 +255,31 @@ export async function updateArtist(id: number, data: UpdateArtistDTO) {
     const error: any = new Error("Artist not found");
     error.statusCode = 404;
     throw error;
+  }
+
+  if (
+    existing.slugLocked &&
+    data.slug !== undefined &&
+    data.slug !== existing.slug
+  ) {
+    const error: any = new Error(
+      "Slug cannot be changed after the artist has been published",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (data.slug) {
+    validateArtistSlug(data.slug);
+  }
+
+  const nextSlug = data.slug !== undefined ? data.slug : existing.slug;
+
+  const isFirstPublish =
+    !existing.slugLocked && data.status === ItemStatus.PUBLISHED;
+
+  if (isFirstPublish) {
+    requireSlugForPublish(nextSlug);
   }
 
   const shouldDeleteOldAvatar =
@@ -160,12 +295,28 @@ export async function updateArtist(id: number, data: UpdateArtistDTO) {
     }
   }
 
-  const updateData = stripUndefined({ ...data }) as Prisma.ArtistUpdateInput;
+  const updateData = stripUndefined({
+    ...data,
+    ...(isFirstPublish ? { slugLocked: true } : {}),
+  }) as Prisma.ArtistUpdateInput;
 
-  return prisma.artist.update({
-    where: { id },
-    data: updateData,
-  });
+  try {
+    return await prisma.artist.update({
+      where: { id },
+      data: updateData,
+    });
+  } catch (err) {
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      const error: any = new Error("This slug is already taken");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    throw err;
+  }
 }
 
 export async function deleteArtist(id: number) {

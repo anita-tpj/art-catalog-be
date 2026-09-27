@@ -1,8 +1,4 @@
-import {
-  ArtworkCategory,
-  ItemStatus,
-  ItemVisibility,
-} from "@prisma/client";
+import { ArtworkCategory, ItemStatus, ItemVisibility } from "@prisma/client";
 import { z } from "zod";
 
 export const createArtistSchema = z.object({
@@ -16,6 +12,17 @@ export const createArtistSchema = z.object({
   primaryCategory: z.nativeEnum(ArtworkCategory),
   status: z.nativeEnum(ItemStatus).default(ItemStatus.DRAFT),
   visibility: z.nativeEnum(ItemVisibility).default(ItemVisibility.PRIVATE),
+  slug: z
+    .string()
+    .trim()
+    .min(3, "Slug must be at least 3 characters")
+    .max(50, "Slug must be at most 50 characters")
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug can contain only lowercase letters, numbers and single hyphens",
+    )
+    .nullable()
+    .optional(),
 });
 
 export const ArtistListQuerySchema = z.object({

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Artist" ADD COLUMN     "slugLocked" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "slug" DROP NOT NULL;
