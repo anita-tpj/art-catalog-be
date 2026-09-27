@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  //output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -9,72 +8,59 @@ datasource db {
 }
 
 model Artist {
-  id             Int     @id @default(autoincrement())
-  name           String
-  bio            String? @db.Text
-  country        String?
-  birthYear      Int?
-  deathYear      Int?
-  avatarUrl      String?
-  avatarPublicId String?
-
+  id              Int             @id @default(autoincrement())
+  name            String
+  bio             String?
+  country         String?
+  birthYear       Int?
+  deathYear       Int?
+  avatarUrl       String?
+  avatarPublicId  String?
   primaryCategory ArtworkCategory
-
-  artworks Artwork[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  status     ItemStatus     @default(DRAFT)
-  visibility ItemVisibility @default(PRIVATE)
-
-  inquiries Inquiry[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  status          ItemStatus      @default(DRAFT)
+  visibility      ItemVisibility  @default(PRIVATE)
+  slug            String?         @unique
+  slugLocked      Boolean         @default(false)
+  artworks        Artwork[]
+  inquiries       Inquiry[]
 }
 
 model Artwork {
-  id            Int     @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   title         String
   year          Int?
-  description   String? @db.Text
+  description   String?
   imageUrl      String?
   imagePublicId String?
-
-  technique   ArtworkTechnique?
-  style       ArtworkStyle?
-  motive      ArtworkMotive?
-  orientation ArtworkOrientation?
-  size        ArtworkStandardSize?
-  framed      Boolean              @default(false)
-
-  artist   Artist @relation(fields: [artistId], references: [id])
-  artistId Int
-
-  category ArtworkCategory
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  status ItemStatus @default(DRAFT)
-
-  inquiries Inquiry[]
+  technique     ArtworkTechnique?
+  style         ArtworkStyle?
+  motive        ArtworkMotive?
+  orientation   ArtworkOrientation?
+  size          ArtworkStandardSize?
+  framed        Boolean              @default(false)
+  artistId      Int
+  category      ArtworkCategory
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  status        ItemStatus           @default(DRAFT)
+  artist        Artist               @relation(fields: [artistId], references: [id])
+  inquiries     Inquiry[]
 }
 
 model Inquiry {
-  id      Int    @id @default(autoincrement())
-  name    String
-  email   String
-  message String
-
+  id        Int           @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
   artistId  Int?
   artworkId Int?
-
-  artist  Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
-  artwork Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
-
-  status InquiryStatus @default(NEW)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    InquiryStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  artist    Artist?       @relation(fields: [artistId], references: [id])
+  artwork   Artwork?      @relation(fields: [artworkId], references: [id])
 
   @@index([createdAt])
   @@index([status])
@@ -83,27 +69,23 @@ model Inquiry {
 }
 
 model AdminUser {
-  id           String    @id @default(cuid())
-  email        String    @unique
+  id           String         @id @default(cuid())
+  email        String         @unique
   passwordHash String
-  role         AdminRole @default(ADMIN)
-  isActive     Boolean   @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sessions AdminSession[]
+  role         AdminRole      @default(ADMIN)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
 }
 
 model AdminSession {
-  id String @id @default(cuid())
-
+  id          String    @id @default(cuid())
   adminUserId String
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
   adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
-
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  revokedAt DateTime?
 }
 
 enum ArtworkCategory {

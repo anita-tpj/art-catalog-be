@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
-import prisma from "../prisma";
 import {
   CreateInquiryDTO,
   InquiryListQueryDTO,
   UpdateInquiryDTO,
 } from "../dtos/inquiry.dto";
+import prisma from "../prisma";
 
 export type InquiryQuery = InquiryListQueryDTO;
 
@@ -46,7 +46,7 @@ export async function getPaginatedInquiries(query: InquiryQuery) {
       where,
       orderBy: { createdAt: "desc" },
       include: {
-        artist: { select: { id: true, name: true } },
+        artist: { select: { id: true, name: true, slug: true } },
         artwork: { select: { id: true, title: true } },
       },
     }),
@@ -79,7 +79,7 @@ export async function getInquiryById(id: number) {
   return prisma.inquiry.findUnique({
     where: { id },
     include: {
-      artist: { select: { id: true, name: true } },
+      artist: { select: { id: true, name: true, slug: true } },
       artwork: { select: { id: true, title: true } },
     },
   });
@@ -95,7 +95,7 @@ export async function createInquiry(data: CreateInquiryDTO) {
       artworkId: data.artworkId ?? null,
     },
     include: {
-      artist: { select: { id: true, name: true } },
+      artist: { select: { id: true, name: true, slug: true } },
       artwork: { select: { id: true, title: true } },
     },
   });
@@ -106,7 +106,7 @@ export async function updateInquiry(id: number, data: UpdateInquiryDTO) {
     where: { id },
     data: { status: data.status },
     include: {
-      artist: { select: { id: true, name: true } },
+      artist: { select: { id: true, name: true, slug: true } },
       artwork: { select: { id: true, title: true } },
     },
   });

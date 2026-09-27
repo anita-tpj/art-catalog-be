@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import * as artistService from "../services/artist.service";
 import { ArtistListQuerySchema, createArtistSchema } from "../dtos/artist.dto";
+import * as artistService from "../services/artist.service";
 
 export async function getAllArtists(req: Request, res: Response) {
   const artists = await artistService.getAllArtists();
@@ -23,10 +23,7 @@ export async function getPaginatedArtists(req: Request, res: Response) {
   });
 }
 
-export async function getAllPublishedArtists(
-  req: Request,
-  res: Response,
-) {
+export async function getAllPublishedArtists(req: Request, res: Response) {
   const artists = await artistService.getPublishedArtists();
   res.json(artists);
 }
@@ -51,10 +48,7 @@ export async function getPaginatedPublishedArtists(
   });
 }
 
-export async function getPublishedArtist(
-  req: Request,
-  res: Response,
-) {
+export async function getPublishedArtist(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -64,6 +58,26 @@ export async function getPublishedArtist(
   }
 
   const artist = await artistService.getPublishedArtistById(id);
+
+  if (!artist) {
+    const error: any = new Error("Artist not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.json(artist);
+}
+
+export async function getPublishedArtistBySlug(req: Request, res: Response) {
+  const slug = req.params.slug;
+
+  if (!slug) {
+    const error: any = new Error("Invalid artist slug");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const artist = await artistService.getPublishedArtistBySlug(slug);
 
   if (!artist) {
     const error: any = new Error("Artist not found");

@@ -1,8 +1,4 @@
-import {
-  ItemStatus,
-  ItemVisibility,
-  Prisma,
-} from "@prisma/client";
+import { ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
 import {
   ArtworkListQueryDTO,
   CreateArtworkDTO,
@@ -94,7 +90,7 @@ export async function getPublishedArtworkById(id: number) {
 }
 
 export async function getPaginatedPublishedArtworks(query: ArtworkQuery) {
-  const { page, pageSize, search, artistId, category } = query;
+  const { page, pageSize, search, artist, category } = query;
   const skip = (page - 1) * pageSize;
 
   const where: Prisma.ArtworkWhereInput = {
@@ -124,8 +120,12 @@ export async function getPaginatedPublishedArtworks(query: ArtworkQuery) {
     ];
   }
 
-  if (artistId) {
-    where.artistId = artistId;
+  if (artist) {
+    where.artist = {
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
+      slug: artist,
+    };
   }
 
   if (category) {
