@@ -6,6 +6,8 @@ import {
   ArtworkStandardSize,
   ArtworkStyle,
   ArtworkTechnique,
+  ItemStatus,
+  ItemVisibility,
   PrismaClient,
 } from "@prisma/client";
 import bcrypt from "bcrypt";
@@ -56,7 +58,8 @@ async function uploadImageOrThrow(
     resource_type: "image",
   });
 
-  // res.public_id includes folder prefix (e.g. "artcatalog-seed/artists/ana")
+  // res.public_id includes folder prefix
+  // (e.g. "artcatalog-seed/artists/ana")
   return { url: res.secure_url, publicId: res.public_id };
 }
 
@@ -66,7 +69,7 @@ async function readFileBytes(localPath: string) {
 }
 
 async function main() {
-    // 0) Ensure admin user (idempotent)
+  // 0) Ensure admin user (idempotent)
   console.log("🌱 Ensuring admin user...");
 
   const adminEmail = optionalEnv("ADMIN_EMAIL", "admin@artcatalog.local");
@@ -90,12 +93,14 @@ async function main() {
   });
 
   console.log(`✅ Admin ensured: ${adminEmail}`);
-  
+
   const artistsCount = await prisma.artist.count();
+
   if (artistsCount > 0) {
     console.log("🌱 Seed skipped (DB already has artists).");
     return;
   }
+
   console.log("🌱 Seeding database (with Cloudinary uploads)...");
 
   // 1) Cleanup (dev-friendly)
@@ -119,14 +124,17 @@ async function main() {
     anaAvatarPath,
     "artists/ana-petrovic",
   );
+
   const marcoAvatar = await uploadImageOrThrow(
     marcoAvatarPath,
     "artists/marco-rossi",
   );
+
   const sofiaAvatar = await uploadImageOrThrow(
     sofiaAvatarPath,
     "artists/sofia-muller",
   );
+
   const mariaAvatar = await uploadImageOrThrow(
     mariaAvatarPath,
     "artists/maria-mudra",
@@ -142,6 +150,9 @@ async function main() {
       avatarUrl: anaAvatar.url,
       avatarPublicId: anaAvatar.publicId,
       primaryCategory: ArtworkCategory.PAINTING,
+
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
     },
   });
 
@@ -154,6 +165,9 @@ async function main() {
       avatarUrl: marcoAvatar.url,
       avatarPublicId: marcoAvatar.publicId,
       primaryCategory: ArtworkCategory.DIGITAL_ART,
+
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
     },
   });
 
@@ -166,8 +180,12 @@ async function main() {
       avatarUrl: sofiaAvatar.url,
       avatarPublicId: sofiaAvatar.publicId,
       primaryCategory: ArtworkCategory.PHOTOGRAPHY,
+
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
     },
   });
+
   const artist4 = await prisma.artist.create({
     data: {
       name: "Maria Mudra",
@@ -177,6 +195,9 @@ async function main() {
       avatarUrl: mariaAvatar.url,
       avatarPublicId: mariaAvatar.publicId,
       primaryCategory: ArtworkCategory.PHOTOGRAPHY,
+
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
     },
   });
 
@@ -187,6 +208,7 @@ async function main() {
   const artwork4Path = path.join(ASSETS_DIR, "artworks", "artwork4.jpg");
   const artwork5Path = path.join(ASSETS_DIR, "artworks", "artwork5.jpg");
   const artwork6Path = path.join(ASSETS_DIR, "artworks", "artwork6.jpg");
+
   await Promise.all([
     readFileBytes(artwork1Path),
     readFileBytes(artwork2Path),
@@ -197,10 +219,15 @@ async function main() {
   ]);
 
   const artwork1 = await uploadImageOrThrow(artwork1Path, "artworks/artwork1");
+
   const artwork2 = await uploadImageOrThrow(artwork2Path, "artworks/artwork2");
+
   const artwork3 = await uploadImageOrThrow(artwork3Path, "artworks/artwork3");
+
   const artwork4 = await uploadImageOrThrow(artwork4Path, "artworks/artwork4");
+
   const artwork5 = await uploadImageOrThrow(artwork5Path, "artworks/artwork5");
+
   const artwork6 = await uploadImageOrThrow(artwork6Path, "artworks/artwork6");
 
   // 5) Create artworks
@@ -222,6 +249,7 @@ async function main() {
 
         category: ArtworkCategory.PAINTING,
         artistId: artist1.id,
+        status: ItemStatus.PUBLISHED,
       },
       {
         title: "Red Geometry",
@@ -239,6 +267,7 @@ async function main() {
 
         category: ArtworkCategory.PAINTING,
         artistId: artist1.id,
+        status: ItemStatus.PUBLISHED,
       },
       {
         title: "Urban Fragment",
@@ -256,6 +285,7 @@ async function main() {
 
         category: ArtworkCategory.DIGITAL_ART,
         artistId: artist2.id,
+        status: ItemStatus.PUBLISHED,
       },
       {
         title: "Concrete Silence",
@@ -273,6 +303,7 @@ async function main() {
 
         category: ArtworkCategory.PHOTOGRAPHY,
         artistId: artist3.id,
+        status: ItemStatus.PUBLISHED,
       },
       {
         title: "Moon",
@@ -290,6 +321,7 @@ async function main() {
 
         category: ArtworkCategory.PHOTOGRAPHY,
         artistId: artist4.id,
+        status: ItemStatus.PUBLISHED,
       },
       {
         title: "Flowers",
@@ -307,6 +339,7 @@ async function main() {
 
         category: ArtworkCategory.PHOTOGRAPHY,
         artistId: artist4.id,
+        status: ItemStatus.PUBLISHED,
       },
     ],
   });

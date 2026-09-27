@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
 import {
   ArtistListQueryDTO,
   CreateArtistDTO,
@@ -45,6 +45,75 @@ export async function getPaginatedArtists(query: ArtistQuery) {
       where,
       orderBy: { createdAt: "desc" },
       include: { artworks: true },
+    }),
+    prisma.artist.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+  };
+}
+
+export async function getPublishedArtists() {
+  return prisma.artist.findMany({
+    where: {
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getPublishedArtistById(id: number) {
+  return prisma.artist.findFirst({
+    where: {
+      id,
+      status: ItemStatus.PUBLISHED,
+    },
+    include: {
+      artworks: {
+        where: {
+          status: ItemStatus.PUBLISHED,
+        },
+      },
+    },
+  });
+}
+
+export async function getPaginatedPublishedArtists(query: ArtistQuery) {
+  const { page, pageSize, search, primaryCategory } = query;
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.ArtistWhereInput = {
+    status: ItemStatus.PUBLISHED,
+    visibility: ItemVisibility.PUBLIC,
+  };
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { country: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (primaryCategory) {
+    where.primaryCategory = primaryCategory;
+  }
+
+  const [items, total] = await Promise.all([
+    prisma.artist.findMany({
+      skip,
+      take: pageSize,
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        artworks: {
+          where: {
+            status: ItemStatus.PUBLISHED,
+          },
+        },
+      },
     }),
     prisma.artist.count({ where }),
   ]);
