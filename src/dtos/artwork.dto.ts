@@ -1,4 +1,5 @@
 import {
+  ArtworkAvailability,
   ArtworkCategory,
   ArtworkMotive,
   ArtworkOrientation,
@@ -24,6 +25,9 @@ export const createArtworkSchema = z.object({
   artistId: z.number().int(),
   category: z.nativeEnum(ArtworkCategory),
   status: z.nativeEnum(ItemStatus).default(ItemStatus.DRAFT),
+  availability: z
+  .nativeEnum(ArtworkAvailability)
+  .default(ArtworkAvailability.AVAILABLE),
 });
 
 export const ArtworkListQuerySchema = z.object({

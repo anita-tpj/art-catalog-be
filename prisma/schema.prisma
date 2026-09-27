@@ -45,6 +45,7 @@ model Artwork {
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   status        ItemStatus           @default(DRAFT)
+  availability  ArtworkAvailability  @default(AVAILABLE)
   artist        Artist               @relation(fields: [artistId], references: [id])
   inquiries     Inquiry[]
 }
@@ -191,4 +192,11 @@ enum ItemStatus {
 enum ItemVisibility {
   PUBLIC
   PRIVATE
+}
+
+enum ArtworkAvailability {
+  AVAILABLE
+  RESERVED
+  SOLD
+  NOT_FOR_SALE
 }
