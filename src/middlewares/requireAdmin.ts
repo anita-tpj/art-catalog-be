@@ -9,6 +9,7 @@ export type AdminRequest = Request & {
     id: string;
     email: string;
     role: AdminRole;
+    artistId: number | null;
   };
 };
 

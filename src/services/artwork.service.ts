@@ -10,25 +10,38 @@ import prisma from "../prisma";
 
 export type ArtworkQuery = ArtworkListQueryDTO;
 
-export async function getAllArtworks() {
+export type ArtworkAccess = {
+  artistId: number | null;
+};
+
+export async function getAllArtworks(access: ArtworkAccess) {
   return prisma.artwork.findMany({
+    where: access.artistId ? { artistId: access.artistId } : {},
     orderBy: { createdAt: "desc" },
     include: { artist: true },
   });
 }
 
-export async function getArtworkById(id: number) {
-  return prisma.artwork.findUnique({
-    where: { id },
+export async function getArtworkById(id: number, access: ArtworkAccess) {
+  return prisma.artwork.findFirst({
+    where: {
+      id,
+      ...(access.artistId ? { artistId: access.artistId } : {}),
+    },
     include: { artist: true },
   });
 }
 
-export async function getPaginatedArtworks(query: ArtworkQuery) {
+export async function getPaginatedArtworks(
+  query: ArtworkQuery,
+  access: ArtworkAccess,
+) {
   const { page, pageSize, search, artistId, category } = query;
   const skip = (page - 1) * pageSize;
 
-  const where: Prisma.ArtworkWhereInput = {};
+  const where: Prisma.ArtworkWhereInput = access.artistId
+    ? { artistId: access.artistId }
+    : {};
 
   // Search by title or related artist name
   if (search) {
@@ -42,7 +55,10 @@ export async function getPaginatedArtworks(query: ArtworkQuery) {
     ];
   }
 
-  if (artistId) where.artistId = artistId;
+  if (!access.artistId && artistId) {
+    where.artistId = artistId;
+  }
+
   if (category) where.category = category;
 
   const [items, total] = await Promise.all([
@@ -149,15 +165,22 @@ export async function getPaginatedPublishedArtworks(query: ArtworkQuery) {
   };
 }
 
-export async function createArtwork(data: CreateArtworkDTO) {
+export async function createArtwork(
+  data: CreateArtworkDTO,
+  access: ArtworkAccess,
+) {
   const { artistId, ...rest } = data;
+
+  const targetArtistId = access.artistId ?? artistId;
 
   const createData: Prisma.ArtworkCreateInput = {
     ...(nullifyUndefined({ ...rest }) as unknown as Omit<
       Prisma.ArtworkCreateInput,
       "artist"
     >),
-    artist: { connect: { id: artistId } },
+    artist: {
+      connect: { id: targetArtistId },
+    },
   };
 
   return prisma.artwork.create({
@@ -165,11 +188,21 @@ export async function createArtwork(data: CreateArtworkDTO) {
   });
 }
 
-export async function updateArtwork(id: number, data: UpdateArtworkDTO) {
+export async function updateArtwork(
+  id: number,
+  data: UpdateArtworkDTO,
+  access: ArtworkAccess,
+) {
   // Fetch current artwork to compare old vs new Cloudinary image
-  const existing = await prisma.artwork.findUnique({
-    where: { id },
-    select: { imagePublicId: true },
+  const existing = await prisma.artwork.findFirst({
+    where: {
+      id,
+      ...(access.artistId ? { artistId: access.artistId } : {}),
+    },
+    select: {
+      imagePublicId: true,
+      artistId: true,
+    },
   });
 
   if (!existing) {
@@ -200,7 +233,9 @@ export async function updateArtwork(id: number, data: UpdateArtworkDTO) {
 
   const updateData: any = stripUndefined({ ...rest });
 
-  if (artistId !== undefined) {
+  // Only a global admin may reassign an artwork to another artist.
+  // Artist-scoped users always keep their existing owner.
+  if (!access.artistId && artistId !== undefined) {
     updateData.artist = { connect: { id: artistId } };
   }
 

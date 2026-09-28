@@ -1,20 +1,26 @@
 import { Request, Response } from "express";
-import * as artworkService from "../services/artwork.service";
 import {
   ArtworkListQuerySchema,
   createArtworkSchema,
   updateArtworkSchema,
 } from "../dtos/artwork.dto";
+import { AdminRequest } from "../middlewares/requireAdmin";
+import * as artworkService from "../services/artwork.service";
 
-export async function getAllArtworks(req: Request, res: Response) {
-  const artworks = await artworkService.getAllArtworks();
+export async function getAllArtworks(req: AdminRequest, res: Response) {
+  const artworks = await artworkService.getAllArtworks({
+    artistId: req.admin!.artistId,
+  });
+
   res.json(artworks);
 }
 
-export async function getPaginatedArtworks(req: Request, res: Response) {
+export async function getPaginatedArtworks(req: AdminRequest, res: Response) {
   const query = ArtworkListQuerySchema.parse(req.query);
 
-  const { items, total } = await artworkService.getPaginatedArtworks(query);
+  const { items, total } = await artworkService.getPaginatedArtworks(query, {
+    artistId: req.admin!.artistId,
+  });
 
   res.json({
     items,
@@ -27,7 +33,7 @@ export async function getPaginatedArtworks(req: Request, res: Response) {
   });
 }
 
-export async function getArtwork(req: Request, res: Response) {
+export async function getArtwork(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -36,7 +42,9 @@ export async function getArtwork(req: Request, res: Response) {
     throw error;
   }
 
-  const artwork = await artworkService.getArtworkById(id);
+  const artwork = await artworkService.getArtworkById(id, {
+    artistId: req.admin!.artistId,
+  });
 
   if (!artwork) {
     const error: any = new Error("Art work not found");
@@ -47,10 +55,7 @@ export async function getArtwork(req: Request, res: Response) {
   res.json(artwork);
 }
 
-export async function getAllPublishedArtworks(
-  req: Request,
-  res: Response,
-) {
+export async function getAllPublishedArtworks(req: Request, res: Response) {
   const artworks = await artworkService.getAllPublishedArtworks();
 
   res.json(artworks);
@@ -76,10 +81,7 @@ export async function getPaginatedPublishedArtworks(
   });
 }
 
-export async function getPublishedArtwork(
-  req: Request,
-  res: Response,
-) {
+export async function getPublishedArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -88,8 +90,7 @@ export async function getPublishedArtwork(
     throw error;
   }
 
-  const artwork =
-    await artworkService.getPublishedArtworkById(id);
+  const artwork = await artworkService.getPublishedArtworkById(id);
 
   if (!artwork) {
     const error: any = new Error("Art work not found");
@@ -100,14 +101,17 @@ export async function getPublishedArtwork(
   res.json(artwork);
 }
 
-export async function createArtwork(req: Request, res: Response) {
+export async function createArtwork(req: AdminRequest, res: Response) {
   const payload = createArtworkSchema.parse(req.body);
 
-  const artwork = await artworkService.createArtwork(payload);
+  const artwork = await artworkService.createArtwork(payload, {
+    artistId: req.admin!.artistId,
+  });
+
   res.status(201).json(artwork);
 }
 
-export async function updateArtwork(req: Request, res: Response) {
+export async function updateArtwork(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -118,7 +122,9 @@ export async function updateArtwork(req: Request, res: Response) {
 
   const payload = updateArtworkSchema.parse(req.body);
 
-  const updated = await artworkService.updateArtwork(id, payload);
+  const updated = await artworkService.updateArtwork(id, payload, {
+    artistId: req.admin!.artistId,
+  });
 
   res.json(updated);
 }

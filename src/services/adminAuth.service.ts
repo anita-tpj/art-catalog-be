@@ -15,6 +15,7 @@ export type AdminMeDto = {
   id: string;
   email: string;
   role: AdminRole;
+  artistId: number | null;
 };
 
 export async function adminLogin(email: string, password: string) {
@@ -37,10 +38,15 @@ export async function adminLogin(email: string, password: string) {
     },
   });
 
-  return {
-    sessionId: session.id,
-    user: { id: user.id, email: user.email, role: user.role } satisfies AdminMeDto,
-  };
+ return {
+  sessionId: session.id,
+  user: {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    artistId: user.artistId,
+  } satisfies AdminMeDto,
+};
 }
 
 export async function adminLogout(sessionId: string) {
@@ -67,9 +73,10 @@ export async function adminMeFromSession(sessionId: string | null): Promise<Admi
   if (!session?.adminUser) return null;
   if (!session.adminUser.isActive) return null;
 
-  return {
-    id: session.adminUser.id,
-    email: session.adminUser.email,
-    role: session.adminUser.role,
-  };
+ return {
+  id: session.adminUser.id,
+  email: session.adminUser.email,
+  role: session.adminUser.role,
+  artistId: session.adminUser.artistId,
+};
 }
