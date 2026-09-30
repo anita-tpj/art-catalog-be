@@ -2,6 +2,8 @@ import { AdminRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import prisma from "../prisma";
+import { sendArtistInvitationEmail } from "./artistInvitationEmail.service";
+import { sendWelcomeEmail } from "./welcomeEmail.service";
 
 const INVITATION_TTL_HOURS = 48;
 
@@ -18,7 +20,10 @@ export async function createArtistInvitation(artistId: number, email: string) {
 
   const artist = await prisma.artist.findUnique({
     where: { id: artistId },
-    select: { id: true },
+    select: {
+      id: true,
+      name: true,
+    },
   });
 
   if (!artist) {
@@ -69,9 +74,22 @@ export async function createArtistInvitation(artistId: number, email: string) {
     },
   });
 
+  try {
+    await sendArtistInvitationEmail({
+      email: normalizedEmail,
+      artistName: artist.name,
+      token,
+    });
+  } catch (error) {
+    await prisma.adminInvitation.delete({
+      where: { id: invitation.id },
+    });
+
+    throw error;
+  }
+
   return {
     invitation,
-    token,
   };
 }
 
@@ -150,6 +168,14 @@ export async function acceptArtistInvitation(token: string, password: string) {
 
     return createdUser;
   });
+  try {
+    await sendWelcomeEmail({
+      email: invitation.email,
+      artistName: invitation.artist.name,
+    });
+  } catch (error) {
+    console.error("Failed to send welcome email:", error);
+  }
 
   return user;
 }
