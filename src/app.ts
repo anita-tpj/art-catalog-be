@@ -13,6 +13,7 @@ import authAdminRouter from "./routes/authAdmin.routes";
 import healthRouter from "./routes/health.routes";
 import inquiriesRouter from "./routes/inquiries.routes";
 import uploadRouter from "./routes/upload.routes";
+import adminInvitationRouter from "./routes/adminInvitation.routes";
 
 dotenv.config();
 
@@ -45,6 +46,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/api/auth", authAdminRouter);
+
+app.use("/api/admin-invitations", adminInvitationRouter);
 
 app.use("/api/admin/dashboard", requireRoles(["ADMIN"]), adminDashBoardRouter);
 app.use("/api/artists", artistsRouter);

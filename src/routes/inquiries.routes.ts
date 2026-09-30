@@ -1,18 +1,31 @@
 import { Router } from "express";
 import {
   createInquiry,
+  getInquiriesStats,
   getInquiry,
-  updateInquiry,
   getPaginatedInquiries,
-  getInquiriesStats
+  updateInquiry,
 } from "../controllers/inquiries.controller";
+import { requireRoles } from "../middlewares/requireAdmin";
 
 const router = Router();
 
 router.post("/", createInquiry);
-router.get("/", getPaginatedInquiries);
-router.get("/stats", getInquiriesStats);
-router.get("/:id", getInquiry);
-router.put("/:id", updateInquiry);
+
+router.get(
+  "/",
+  requireRoles(["ADMIN", "EDITOR", "VIEWER"]),
+  getPaginatedInquiries,
+);
+
+router.get(
+  "/stats",
+  requireRoles(["ADMIN", "EDITOR", "VIEWER"]),
+  getInquiriesStats,
+);
+
+router.get("/:id", requireRoles(["ADMIN", "EDITOR", "VIEWER"]), getInquiry);
+
+router.put("/:id", requireRoles(["ADMIN", "EDITOR"]), updateInquiry);
 
 export default router;

@@ -1,16 +1,22 @@
 import { Request, Response } from "express";
 import { ArtistListQuerySchema, createArtistSchema } from "../dtos/artist.dto";
+import { AdminRequest } from "../middlewares/requireAdmin";
 import * as artistService from "../services/artist.service";
 
-export async function getAllArtists(req: Request, res: Response) {
-  const artists = await artistService.getAllArtists();
+export async function getAllArtists(req: AdminRequest, res: Response) {
+  const artists = await artistService.getAllArtists({
+    artistId: req.admin!.artistId,
+  });
+
   res.json(artists);
 }
 
-export async function getPaginatedArtists(req: Request, res: Response) {
+export async function getPaginatedArtists(req: AdminRequest, res: Response) {
   const query = ArtistListQuerySchema.parse(req.query);
 
-  const { items, total } = await artistService.getPaginatedArtists(query);
+  const { items, total } = await artistService.getPaginatedArtists(query, {
+    artistId: req.admin!.artistId,
+  });
 
   res.json({
     items,
@@ -88,7 +94,7 @@ export async function getPublishedArtistBySlug(req: Request, res: Response) {
   res.json(artist);
 }
 
-export async function getArtist(req: Request, res: Response) {
+export async function getArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -97,7 +103,9 @@ export async function getArtist(req: Request, res: Response) {
     throw error;
   }
 
-  const artist = await artistService.getArtistById(id);
+  const artist = await artistService.getArtistById(id, {
+    artistId: req.admin!.artistId,
+  });
 
   if (!artist) {
     const error: any = new Error("Artist not found");
@@ -115,7 +123,7 @@ export async function createArtist(req: Request, res: Response) {
   res.status(201).json(artist);
 }
 
-export async function updateArtist(req: Request, res: Response) {
+export async function updateArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -124,33 +132,23 @@ export async function updateArtist(req: Request, res: Response) {
     throw error;
   }
 
-  const existing = await artistService.getArtistById(id);
+  const updated = await artistService.updateArtist(id, req.body, {
+    artistId: req.admin!.artistId,
+  });
 
-  if (!existing) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const updated = await artistService.updateArtist(id, req.body);
   res.json(updated);
 }
 
-export async function deleteArtist(req: Request, res: Response) {
+export async function deleteArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
+
   if (!Number.isInteger(id) || id <= 0) {
     const error: any = new Error("Invalid artist id");
     error.statusCode = 400;
-    throw error;
-  }
-
-  const existing = await artistService.getArtistById(id);
-  if (!existing) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
     throw error;
   }
 
   await artistService.deleteArtist(id);
+
   res.status(204).send();
 }

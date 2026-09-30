@@ -10,24 +10,38 @@ import prisma from "../prisma";
 
 export type ArtistQuery = ArtistListQueryDTO;
 
-export async function getAllArtists() {
+export type ArtistAccess = {
+  artistId: number | null;
+};
+
+export async function getAllArtists(access: ArtistAccess) {
   return prisma.artist.findMany({
+    where: access.artistId ? { id: access.artistId } : {},
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getArtistById(id: number) {
+export async function getArtistById(id: number, access: ArtistAccess) {
+  if (access.artistId && access.artistId !== id) {
+    return null;
+  }
+
   return prisma.artist.findUnique({
     where: { id },
     include: { artworks: true },
   });
 }
 
-export async function getPaginatedArtists(query: ArtistQuery) {
+export async function getPaginatedArtists(
+  query: ArtistQuery,
+  access: ArtistAccess,
+) {
   const { page, pageSize, search, primaryCategory } = query;
   const skip = (page - 1) * pageSize;
 
-  const where: Prisma.ArtistWhereInput = {};
+  const where: Prisma.ArtistWhereInput = access.artistId
+    ? { id: access.artistId }
+    : {};
 
   if (search) {
     where.OR = [
@@ -240,7 +254,16 @@ export async function createArtist(data: CreateArtistDTO) {
   }
 }
 
-export async function updateArtist(id: number, data: UpdateArtistDTO) {
+export async function updateArtist(
+  id: number,
+  data: UpdateArtistDTO,
+  access: ArtistAccess,
+) {
+  if (access.artistId && access.artistId !== id) {
+    const error: any = new Error("Artist not found");
+    error.statusCode = 404;
+    throw error;
+  }
   // Fetch current avatarPublicId to decide if we need to delete old image
   const existing = await prisma.artist.findUnique({
     where: { id },
