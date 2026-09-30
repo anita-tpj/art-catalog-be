@@ -1,5 +1,10 @@
 import { Router } from "express";
 import {
+  deleteArtistInvitation,
+  getArtistCmsAccessStatus,
+  postArtistInvitation,
+} from "../controllers/adminInvitation.controller";
+import {
   createArtist,
   deleteArtist,
   getAllArtists,
@@ -31,6 +36,24 @@ router.get(
   "/",
   requireRoles(["ADMIN", "EDITOR", "VIEWER"]),
   getPaginatedArtists,
+);
+
+router.get(
+  "/:id/cms-access",
+  requireRoles(["ADMIN"]),
+  getArtistCmsAccessStatus,
+);
+
+router.post(
+  "/:id/cms-invitations",
+  requireRoles(["ADMIN"]),
+  postArtistInvitation,
+);
+
+router.delete(
+  "/:id/cms-invitations/:invitationId",
+  requireRoles(["ADMIN"]),
+  deleteArtistInvitation,
 );
 
 router.get("/:id", requireRoles(["ADMIN", "EDITOR", "VIEWER"]), getArtist);

@@ -8,24 +8,25 @@ datasource db {
 }
 
 model Artist {
-  id              Int             @id @default(autoincrement())
-  name            String
-  bio             String?
-  country         String?
-  birthYear       Int?
-  deathYear       Int?
-  avatarUrl       String?
-  avatarPublicId  String?
-  primaryCategory ArtworkCategory
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  status          ItemStatus      @default(DRAFT)
-  visibility      ItemVisibility  @default(PRIVATE)
-  slug            String?         @unique
-  slugLocked      Boolean         @default(false)
-  artworks        Artwork[]
-  inquiries       Inquiry[]
-  adminUsers AdminUser[]
+  id               Int               @id @default(autoincrement())
+  name             String
+  bio              String?
+  country          String?
+  birthYear        Int?
+  deathYear        Int?
+  avatarUrl        String?
+  avatarPublicId   String?
+  primaryCategory  ArtworkCategory
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  status           ItemStatus        @default(DRAFT)
+  visibility       ItemVisibility    @default(PRIVATE)
+  slug             String?           @unique
+  slugLocked       Boolean           @default(false)
+  artworks         Artwork[]
+  inquiries        Inquiry[]
+  adminUsers       AdminUser[]
+  adminInvitations AdminInvitation[]
 }
 
 model Artwork {
@@ -90,6 +91,25 @@ model AdminSession {
   createdAt   DateTime  @default(now())
   revokedAt   DateTime?
   adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+}
+
+model AdminInvitation {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  role      AdminRole @default(EDITOR)
+
+  artistId Int
+  artist   Artist @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  expiresAt  DateTime
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([artistId])
+  @@index([email])
 }
 
 enum ArtworkCategory {
