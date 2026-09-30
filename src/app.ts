@@ -14,6 +14,7 @@ import healthRouter from "./routes/health.routes";
 import inquiriesRouter from "./routes/inquiries.routes";
 import uploadRouter from "./routes/upload.routes";
 import adminInvitationRouter from "./routes/adminInvitation.routes";
+import contactRouter from "./routes/contact.routes";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use("/api/admin/dashboard", requireRoles(["ADMIN"]), adminDashBoardRouter);
 app.use("/api/artists", artistsRouter);
 app.use("/api/artworks", artworkRouter);
 app.use("/api/inquiries", inquiriesRouter);
+app.use("/api/contact", contactRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/health", healthRouter);
 

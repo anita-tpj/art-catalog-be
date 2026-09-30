@@ -5,6 +5,7 @@ import {
   UpdateInquiryDTO,
 } from "../dtos/inquiry.dto";
 import prisma from "../prisma";
+import { sendInquiryNotificationEmail } from "./inquiryNotificationEmail.service";
 
 export type InquiryQuery = InquiryListQueryDTO;
 
@@ -175,7 +176,7 @@ export async function createInquiry(data: CreateInquiryDTO) {
     throw error;
   }
 
-  return prisma.inquiry.create({
+  const inquiry = await prisma.inquiry.create({
     data: {
       name: data.name,
       email: data.email,
@@ -188,6 +189,37 @@ export async function createInquiry(data: CreateInquiryDTO) {
       artwork: { select: { id: true, title: true } },
     },
   });
+
+  if (inquiry.artist) {
+    const cmsAccounts = await prisma.adminUser.findMany({
+      where: {
+        artistId: inquiry.artist.id,
+        isActive: true,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    for (const account of cmsAccounts) {
+      try {
+        await sendInquiryNotificationEmail({
+          to: account.email,
+          senderName: inquiry.name,
+          artistName: inquiry.artist.name,
+          inquiryId: inquiry.id,
+          artworkTitle: inquiry.artwork?.title,
+        });
+      } catch (error) {
+        console.error(
+          `Failed to send inquiry notification to ${account.email}:`,
+          error,
+        );
+      }
+    }
+  }
+
+  return inquiry;
 }
 
 export async function updateInquiry(
