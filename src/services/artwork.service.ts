@@ -1,4 +1,9 @@
-import { ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
+import {
+  ArtworkCategory,
+  ItemStatus,
+  ItemVisibility,
+  Prisma,
+} from "@prisma/client";
 import {
   ArtworkListQueryDTO,
   CreateArtworkDTO,
@@ -13,6 +18,107 @@ export type ArtworkQuery = ArtworkListQueryDTO;
 export type ArtworkAccess = {
   artistId: number | null;
 };
+
+type ArtworkMetadataField =
+  | "technique"
+  | "medium"
+  | "style"
+  | "motive"
+  | "orientation"
+  | "size"
+  | "framed";
+
+const CATEGORY_METADATA_FIELDS: Record<
+  ArtworkCategory,
+  ArtworkMetadataField[]
+> = {
+  [ArtworkCategory.PAINTING]: [
+    "medium",
+    "technique",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+    "framed",
+  ],
+  [ArtworkCategory.SCULPTURE]: ["medium", "style", "size"],
+  [ArtworkCategory.PHOTOGRAPHY]: [
+    "medium",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+  ],
+  [ArtworkCategory.DRAWING_ILLUSTRATION]: [
+    "medium",
+    "technique",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+    "framed",
+  ],
+  [ArtworkCategory.PRINTMAKING]: [
+    "medium",
+    "technique",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+    "framed",
+  ],
+  [ArtworkCategory.DIGITAL_ART]: [
+    "medium",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+  ],
+  [ArtworkCategory.MIXED_MEDIA]: [
+    "medium",
+    "technique",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+    "framed",
+  ],
+  [ArtworkCategory.TEXTILE_FIBER_ART]: [],
+  [ArtworkCategory.CERAMICS]: [],
+  [ArtworkCategory.OTHER]: [
+    "medium",
+    "technique",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+  ],
+};
+
+function normalizeArtworkMetadata(
+  data: Record<string, any>,
+  category: ArtworkCategory,
+) {
+  const visibleFields = CATEGORY_METADATA_FIELDS[category];
+
+  const metadataFields: ArtworkMetadataField[] = [
+    "technique",
+    "medium",
+    "style",
+    "motive",
+    "orientation",
+    "size",
+    "framed",
+  ];
+
+  for (const field of metadataFields) {
+    if (!visibleFields.includes(field)) {
+      data[field] = field === "framed" ? false : null;
+    }
+  }
+
+  return data;
+}
 
 export async function getAllArtworks(access: ArtworkAccess) {
   return prisma.artwork.findMany({
@@ -173,11 +279,13 @@ export async function createArtwork(
 
   const targetArtistId = access.artistId ?? artistId;
 
+  const normalizedData = normalizeArtworkMetadata(
+    nullifyUndefined({ ...rest }),
+    data.category,
+  );
+
   const createData: Prisma.ArtworkCreateInput = {
-    ...(nullifyUndefined({ ...rest }) as unknown as Omit<
-      Prisma.ArtworkCreateInput,
-      "artist"
-    >),
+    ...(normalizedData as unknown as Omit<Prisma.ArtworkCreateInput, "artist">),
     artist: {
       connect: { id: targetArtistId },
     },
@@ -194,6 +302,7 @@ export async function updateArtwork(
   access: ArtworkAccess,
 ) {
   // Fetch current artwork to compare old vs new Cloudinary image
+  // and get its current category for metadata normalization.
   const existing = await prisma.artwork.findFirst({
     where: {
       id,
@@ -202,6 +311,7 @@ export async function updateArtwork(
     select: {
       imagePublicId: true,
       artistId: true,
+      category: true,
     },
   });
 
@@ -220,7 +330,12 @@ export async function updateArtwork(
   // Build update payload without undefined keys
   const { artistId, ...rest } = data as any;
 
-  const updateData: any = stripUndefined({ ...rest });
+  const category = data.category ?? existing.category;
+
+  const updateData: any = normalizeArtworkMetadata(
+    stripUndefined({ ...rest }),
+    category,
+  );
 
   // Only a global admin may reassign an artwork to another artist.
   // Artist-scoped users always keep their existing owner.

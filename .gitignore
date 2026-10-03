@@ -81,3 +81,8 @@ Thumbs.db
 
 # JetBrains IDEs (WebStorm, IDEA, etc.)
 .idea/
+
+# Database dumps / local exports
+*.dump
+*.sql
+demo-content.json
