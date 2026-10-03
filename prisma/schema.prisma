@@ -30,25 +30,26 @@ model Artist {
 }
 
 model Artwork {
-  id            Int                  @id @default(autoincrement())
+  id            Int                 @id @default(autoincrement())
   title         String
   year          Int?
   description   String?
   imageUrl      String?
   imagePublicId String?
+  medium        String?
   technique     ArtworkTechnique?
   style         ArtworkStyle?
   motive        ArtworkMotive?
   orientation   ArtworkOrientation?
-  size          ArtworkStandardSize?
-  framed        Boolean              @default(false)
+  size          String?
+  framed        Boolean             @default(false)
   artistId      Int
   category      ArtworkCategory
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  status        ItemStatus           @default(DRAFT)
-  availability  ArtworkAvailability  @default(AVAILABLE)
-  artist        Artist               @relation(fields: [artistId], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  status        ItemStatus          @default(DRAFT)
+  availability  ArtworkAvailability @default(AVAILABLE)
+  artist        Artist              @relation(fields: [artistId], references: [id])
   inquiries     Inquiry[]
 }
 
@@ -160,6 +161,8 @@ enum ArtworkStyle {
 }
 
 enum ArtworkMotive {
+  ABSTRACT
+  ARCHITECTURE
   PORTRAIT
   LANDSCAPE
   STILL_LIFE
@@ -180,18 +183,6 @@ enum ArtworkOrientation {
   LANDSCAPE
   SQUARE
   PANORAMIC
-}
-
-enum ArtworkStandardSize {
-  SIZE_30x40
-  SIZE_40x50
-  SIZE_50x70
-  SIZE_60x80
-  SIZE_70x100
-  A4_21x29_7
-  A3_29_7x42
-  A2_42x59_4
-  CUSTOM
 }
 
 enum InquiryStatus {

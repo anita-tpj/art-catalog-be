@@ -214,21 +214,10 @@ export async function updateArtwork(
   const oldPublicId = existing.imagePublicId;
   const newPublicId = data.imagePublicId;
 
-  // If there is a new image AND it's different than the current one → delete old Cloudinary image
   const shouldDeleteOldImage =
     oldPublicId && newPublicId && oldPublicId !== newPublicId;
 
-  if (shouldDeleteOldImage) {
-    try {
-      await deleteImage(oldPublicId);
-    } catch (err) {
-      console.error("Failed to delete previous artwork Cloudinary image:", err);
-    }
-  }
-
-  // Update the DB record with new fields including new image URL/publicId
   // Build update payload without undefined keys
-  // Also handle artist change via relation connect (avoid artistId: never issues)
   const { artistId, ...rest } = data as any;
 
   const updateData: any = stripUndefined({ ...rest });
@@ -239,10 +228,22 @@ export async function updateArtwork(
     updateData.artist = { connect: { id: artistId } };
   }
 
-  return prisma.artwork.update({
+  // First update the DB successfully
+  const updatedArtwork = await prisma.artwork.update({
     where: { id },
     data: updateData,
   });
+
+  // Only after the DB update succeeds, delete the previous Cloudinary image
+  if (shouldDeleteOldImage) {
+    try {
+      await deleteImage(oldPublicId);
+    } catch (err) {
+      console.error("Failed to delete previous artwork Cloudinary image:", err);
+    }
+  }
+
+  return updatedArtwork;
 }
 
 export async function deleteArtwork(id: number) {

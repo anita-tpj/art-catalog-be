@@ -3,7 +3,6 @@ import {
   ArtworkCategory,
   ArtworkMotive,
   ArtworkOrientation,
-  ArtworkStandardSize,
   ArtworkStyle,
   ArtworkTechnique,
   ItemStatus,
@@ -16,18 +15,19 @@ export const createArtworkSchema = z.object({
   imageUrl: z.string().url().optional(),
   imagePublicId: z.string().optional(),
   year: z.number().int().optional(),
+  medium: z.string().trim().max(200, "Medium is too long").optional(),
   technique: z.nativeEnum(ArtworkTechnique).optional(),
   style: z.nativeEnum(ArtworkStyle).optional(),
   motive: z.nativeEnum(ArtworkMotive).optional(),
   orientation: z.nativeEnum(ArtworkOrientation).optional(),
-  size: z.nativeEnum(ArtworkStandardSize).optional(),
+  size: z.string().trim().max(100, "Size is too long").optional(),
   framed: z.boolean().default(false),
   artistId: z.number().int(),
   category: z.nativeEnum(ArtworkCategory),
   status: z.nativeEnum(ItemStatus).default(ItemStatus.DRAFT),
   availability: z
-  .nativeEnum(ArtworkAvailability)
-  .default(ArtworkAvailability.AVAILABLE),
+    .nativeEnum(ArtworkAvailability)
+    .default(ArtworkAvailability.AVAILABLE),
 });
 
 export const ArtworkListQuerySchema = z.object({
