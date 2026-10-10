@@ -15,7 +15,17 @@ cloudinary.config({
 });
 
 export async function deleteImage(publicId: string) {
-  return cloudinary.uploader.destroy(publicId);
+  const privateResult = await cloudinary.uploader.destroy(publicId, {
+    type: "private",
+  });
+
+  if (privateResult.result === "not found") {
+    return cloudinary.uploader.destroy(publicId, {
+      type: "upload",
+    });
+  }
+
+  return privateResult;
 }
 
 export default cloudinary;
