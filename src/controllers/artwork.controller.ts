@@ -15,6 +15,11 @@ export async function getAllArtworks(req: AdminRequest, res: Response) {
   res.json(artworks);
 }
 
+export async function getFeaturedArtworks(req: Request, res: Response) {
+  const artworks = await artworkService.getFeaturedArtworks();
+  res.json(artworks);
+}
+
 export async function getPaginatedArtworks(req: AdminRequest, res: Response) {
   const query = ArtworkListQuerySchema.parse(req.query);
 
@@ -104,9 +109,10 @@ export async function getPublishedArtwork(req: Request, res: Response) {
 export async function createArtwork(req: AdminRequest, res: Response) {
   const payload = createArtworkSchema.parse(req.body);
 
- const artwork = await artworkService.createArtwork(payload, {
+  const artwork = await artworkService.createArtwork(payload, {
     artistId: req.admin!.artistId,
     adminId: req.admin!.id,
+    role: req.admin!.role,
   });
 
   res.status(201).json(artwork);
@@ -125,6 +131,7 @@ export async function updateArtwork(req: AdminRequest, res: Response) {
 
   const updated = await artworkService.updateArtwork(id, payload, {
     artistId: req.admin!.artistId,
+    role: req.admin!.role,
   });
 
   res.json(updated);

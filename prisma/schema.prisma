@@ -27,6 +27,7 @@ model Artist {
   inquiries        Inquiry[]
   adminUsers       AdminUser[]
   adminInvitations AdminInvitation[]
+  isFeatured Boolean @default(false)
 }
 
 model Artwork {
@@ -54,6 +55,7 @@ model Artwork {
   copyrightConfirmedAt   DateTime?
   copyrightConfirmedById String?
   inquiries              Inquiry[]
+  isFeatured Boolean @default(false)
 }
 
 model Inquiry {

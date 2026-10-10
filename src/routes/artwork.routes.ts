@@ -3,6 +3,7 @@ import {
   createArtwork,
   deleteArtwork,
   getAllArtworks,
+  getFeaturedArtworks,
   getAllPublishedArtworks,
   getArtwork,
   getPaginatedArtworks,
@@ -17,6 +18,7 @@ import { validateBody } from "../middlewares/validateRequest";
 const router = Router();
 
 // Public
+router.get("/public/featured", getFeaturedArtworks);
 router.get("/public/all", getAllPublishedArtworks);
 router.get("/public", getPaginatedPublishedArtworks);
 router.get("/public/:id", getPublishedArtwork);
