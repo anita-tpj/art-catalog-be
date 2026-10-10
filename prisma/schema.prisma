@@ -30,27 +30,30 @@ model Artist {
 }
 
 model Artwork {
-  id            Int                 @id @default(autoincrement())
-  title         String
-  year          Int?
-  description   String?
-  imageUrl      String?
-  imagePublicId String?
-  medium        String?
-  technique     ArtworkTechnique?
-  style         ArtworkStyle?
-  motive        ArtworkMotive?
-  orientation   ArtworkOrientation?
-  size          String?
-  framed        Boolean             @default(false)
-  artistId      Int
-  category      ArtworkCategory
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  status        ItemStatus          @default(DRAFT)
-  availability  ArtworkAvailability @default(AVAILABLE)
-  artist        Artist              @relation(fields: [artistId], references: [id])
-  inquiries     Inquiry[]
+  id                     Int                 @id @default(autoincrement())
+  title                  String
+  year                   Int?
+  description            String?
+  imageUrl               String?
+  imagePublicId          String?
+  origin                 ArtworkOrigin       @default(ORIGINAL)
+  medium                 String?
+  technique              ArtworkTechnique?
+  style                  ArtworkStyle?
+  motive                 ArtworkMotive?
+  orientation            ArtworkOrientation?
+  size                   String?
+  framed                 Boolean             @default(false)
+  artistId               Int
+  category               ArtworkCategory
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  status                 ItemStatus          @default(DRAFT)
+  availability           ArtworkAvailability @default(AVAILABLE)
+  artist                 Artist              @relation(fields: [artistId], references: [id])
+  copyrightConfirmedAt   DateTime?
+  copyrightConfirmedById String?
+  inquiries              Inquiry[]
 }
 
 model Inquiry {
@@ -213,4 +216,10 @@ enum ArtworkAvailability {
   RESERVED
   SOLD
   NOT_FOR_SALE
+}
+
+enum ArtworkOrigin {
+  ORIGINAL
+  BASED_ON_REFERENCE
+  REPRODUCTION
 }

@@ -104,8 +104,9 @@ export async function getPublishedArtwork(req: Request, res: Response) {
 export async function createArtwork(req: AdminRequest, res: Response) {
   const payload = createArtworkSchema.parse(req.body);
 
-  const artwork = await artworkService.createArtwork(payload, {
+ const artwork = await artworkService.createArtwork(payload, {
     artistId: req.admin!.artistId,
+    adminId: req.admin!.id,
   });
 
   res.status(201).json(artwork);
