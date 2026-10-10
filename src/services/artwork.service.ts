@@ -17,6 +17,7 @@ export type ArtworkQuery = ArtworkListQueryDTO;
 
 export type ArtworkAccess = {
   artistId: number | null;
+  adminId?: string;
 };
 
 type ArtworkMetadataField =
@@ -275,9 +276,13 @@ export async function createArtwork(
   data: CreateArtworkDTO,
   access: ArtworkAccess,
 ) {
-  const { artistId, ...rest } = data;
+  const { artistId, copyrightConfirmed, ...rest } = data;
 
   const targetArtistId = access.artistId ?? artistId;
+
+  if (!access.adminId) {
+    throw new Error("Admin ID is required for copyright confirmation");
+  }
 
   const normalizedData = normalizeArtworkMetadata(
     nullifyUndefined({ ...rest }),
@@ -289,6 +294,8 @@ export async function createArtwork(
     artist: {
       connect: { id: targetArtistId },
     },
+    copyrightConfirmedAt: new Date(),
+    copyrightConfirmedById: access.adminId,
   };
 
   return prisma.artwork.create({

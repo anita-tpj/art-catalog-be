@@ -3,6 +3,7 @@ import {
   ArtworkCategory,
   ArtworkMotive,
   ArtworkOrientation,
+  ArtworkOrigin,
   ArtworkStyle,
   ArtworkTechnique,
   ItemStatus,
@@ -14,6 +15,7 @@ export const createArtworkSchema = z.object({
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
   imagePublicId: z.string().optional(),
+  origin: z.nativeEnum(ArtworkOrigin),
   year: z.number().int().optional(),
   medium: z.string().trim().max(200, "Medium is too long").optional(),
   technique: z.nativeEnum(ArtworkTechnique).optional(),
@@ -28,6 +30,7 @@ export const createArtworkSchema = z.object({
   availability: z
     .nativeEnum(ArtworkAvailability)
     .default(ArtworkAvailability.AVAILABLE),
+  copyrightConfirmed: z.literal(true),
 });
 
 export const ArtworkListQuerySchema = z.object({
@@ -45,7 +48,9 @@ export const ArtworkListQuerySchema = z.object({
   category: z.nativeEnum(ArtworkCategory).optional(),
 });
 
-export const updateArtworkSchema = createArtworkSchema.partial();
+export const updateArtworkSchema = createArtworkSchema
+  .omit({ copyrightConfirmed: true })
+  .partial();
 
 export type CreateArtworkDTO = z.infer<typeof createArtworkSchema>;
 export type UpdateArtworkDTO = z.infer<typeof updateArtworkSchema>;
