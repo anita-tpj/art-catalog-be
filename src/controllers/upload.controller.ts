@@ -1,24 +1,36 @@
+import type { UploadApiResponse } from "cloudinary";
 import { Request, Response } from "express";
 import cloudinary from "../libs/cloudinary";
-import type { UploadApiResponse } from "cloudinary";
 
 async function uploadCloudinaryImage(
   file: Express.Multer.File,
-  folder: string
+  folder: string,
 ): Promise<{ url: string; publicId: string }> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder,
         resource_type: "image",
+        type: "private",
       },
       (error, result: UploadApiResponse | undefined) => {
         if (error || !result) return reject(error);
+
+        const url = cloudinary.url(result.public_id, {
+          secure: true,
+          resource_type: "image",
+          type: "private",
+          transformation: "ca_public_image",
+          format: result.format,
+          version: result.version,
+          sign_url: false,
+        });
+
         resolve({
-          url: result.secure_url,
+          url,
           publicId: result.public_id,
         });
-      }
+      },
     );
 
     stream.end(file.buffer);
