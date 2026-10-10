@@ -10,6 +10,7 @@ import {
   getAllArtists,
   getAllPublishedArtists,
   getArtist,
+  getFeaturedArtists,
   getPaginatedArtists,
   getPaginatedPublishedArtists,
   getPublishedArtist,
@@ -24,6 +25,8 @@ import { validateBody } from "../middlewares/validateRequest";
 const router = Router();
 
 // Public
+// Public
+router.get("/public/featured", getFeaturedArtists);
 router.get("/public/all", getAllPublishedArtists);
 router.get("/public", getPaginatedPublishedArtists);
 router.get("/public/profile/:slug", getPublishedArtistBySlug);

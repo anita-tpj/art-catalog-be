@@ -31,6 +31,7 @@ export const createArtworkSchema = z.object({
     .nativeEnum(ArtworkAvailability)
     .default(ArtworkAvailability.AVAILABLE),
   copyrightConfirmed: z.literal(true),
+  isFeatured: z.boolean().optional(),
 });
 
 export const ArtworkListQuerySchema = z.object({

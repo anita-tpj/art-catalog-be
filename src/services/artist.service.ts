@@ -1,4 +1,4 @@
-import { ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
+import { AdminRole, ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
 import {
   ArtistListQueryDTO,
   CreateArtistDTO,
@@ -12,12 +12,25 @@ export type ArtistQuery = ArtistListQueryDTO;
 
 export type ArtistAccess = {
   artistId: number | null;
+  role?: AdminRole;
 };
 
 export async function getAllArtists(access: ArtistAccess) {
   return prisma.artist.findMany({
     where: access.artistId ? { id: access.artistId } : {},
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getFeaturedArtists() {
+  return prisma.artist.findMany({
+    where: {
+      isFeatured: true,
+      status: ItemStatus.PUBLISHED,
+      visibility: ItemVisibility.PUBLIC,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
   });
 }
 
@@ -220,7 +233,18 @@ function requireSlugForPublish(slug: string | null | undefined) {
   }
 }
 
-export async function createArtist(data: CreateArtistDTO) {
+export async function createArtist(
+  data: CreateArtistDTO,
+  access: ArtistAccess,
+) {
+  if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
+    const error: any = new Error(
+      "Only global admins can manage featured artists",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (data.slug) {
     validateArtistSlug(data.slug);
   }
@@ -259,6 +283,14 @@ export async function updateArtist(
   data: UpdateArtistDTO,
   access: ArtistAccess,
 ) {
+  if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
+    const error: any = new Error(
+      "Only global admins can manage featured artists",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (access.artistId && access.artistId !== id) {
     const error: any = new Error("Artist not found");
     error.statusCode = 404;

@@ -1,4 +1,5 @@
 import {
+  AdminRole,
   ArtworkCategory,
   ItemStatus,
   ItemVisibility,
@@ -18,6 +19,7 @@ export type ArtworkQuery = ArtworkListQueryDTO;
 export type ArtworkAccess = {
   artistId: number | null;
   adminId?: string;
+  role?: AdminRole;
 };
 
 type ArtworkMetadataField =
@@ -125,6 +127,22 @@ export async function getAllArtworks(access: ArtworkAccess) {
   return prisma.artwork.findMany({
     where: access.artistId ? { artistId: access.artistId } : {},
     orderBy: { createdAt: "desc" },
+    include: { artist: true },
+  });
+}
+
+export async function getFeaturedArtworks() {
+  return prisma.artwork.findMany({
+    where: {
+      isFeatured: true,
+      status: ItemStatus.PUBLISHED,
+      artist: {
+        status: ItemStatus.PUBLISHED,
+        visibility: ItemVisibility.PUBLIC,
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
     include: { artist: true },
   });
 }
@@ -278,6 +296,14 @@ export async function createArtwork(
 ) {
   const { artistId, copyrightConfirmed, ...rest } = data;
 
+  if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
+    const error: any = new Error(
+      "Only global admins can manage featured artworks",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
+
   const targetArtistId = access.artistId ?? artistId;
 
   if (!access.adminId) {
@@ -338,6 +364,14 @@ export async function updateArtwork(
   const { artistId, ...rest } = data as any;
 
   const category = data.category ?? existing.category;
+
+  if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
+    const error: any = new Error(
+      "Only global admins can manage featured artworks",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
 
   const updateData: any = normalizeArtworkMetadata(
     stripUndefined({ ...rest }),

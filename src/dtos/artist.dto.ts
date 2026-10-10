@@ -12,6 +12,7 @@ export const createArtistSchema = z.object({
   primaryCategory: z.nativeEnum(ArtworkCategory),
   status: z.nativeEnum(ItemStatus).default(ItemStatus.DRAFT),
   visibility: z.nativeEnum(ItemVisibility).default(ItemVisibility.PRIVATE),
+  isFeatured: z.boolean().optional(),
   slug: z
     .string()
     .trim()
