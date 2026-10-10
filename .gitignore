@@ -85,4 +85,5 @@ Thumbs.db
 # Database dumps / local exports
 *.dump
 *.sql
+!prisma/migrations/**/migration.sql
 demo-content.json
