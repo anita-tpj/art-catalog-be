@@ -1,3 +1,4 @@
+import { escapeHtml } from "../utils/escapeHtml";
 import { sendEmail } from "./email.service";
 
 type SendContactEmailParams = {
@@ -14,15 +15,6 @@ function getContactEmail(): string {
   }
 
   return contactEmail;
-}
-
-function escapeHtml(value: string): string {
-return value
-  .replace(/&/g, "&amp;")
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;")
-  .replace(/"/g, "&quot;")
-  .replace(/'/g, "&#039;");
 }
 
 export async function sendContactEmail({

@@ -7,14 +7,15 @@ import logger from "./libs/logger";
 import { errorHandler } from "./middlewares/errorHandler";
 import { requireRoles } from "./middlewares/requireAdmin";
 import adminDashBoardRouter from "./routes/adminDashboard.routes";
+import adminInvitationRouter from "./routes/adminInvitation.routes";
+import adminUsersRouter from "./routes/adminUsers.routes";
 import artistsRouter from "./routes/artists.routes";
 import artworkRouter from "./routes/artwork.routes";
 import authAdminRouter from "./routes/authAdmin.routes";
+import contactRouter from "./routes/contact.routes";
 import healthRouter from "./routes/health.routes";
 import inquiriesRouter from "./routes/inquiries.routes";
 import uploadRouter from "./routes/upload.routes";
-import adminInvitationRouter from "./routes/adminInvitation.routes";
-import contactRouter from "./routes/contact.routes";
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ app.use(
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
@@ -49,6 +50,8 @@ app.use(cookieParser());
 app.use("/api/auth", authAdminRouter);
 
 app.use("/api/admin-invitations", adminInvitationRouter);
+
+app.use("/api/admin/users", requireRoles(["ADMIN"]), adminUsersRouter);
 
 app.use("/api/admin/dashboard", requireRoles(["ADMIN"]), adminDashBoardRouter);
 app.use("/api/artists", artistsRouter);

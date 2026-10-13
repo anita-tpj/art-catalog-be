@@ -283,13 +283,20 @@ export async function updateArtist(
   data: UpdateArtistDTO,
   access: ArtistAccess,
 ) {
-  if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
-    const error: any = new Error(
-      "Only global admins can manage featured artists",
-    );
-    error.statusCode = 403;
-    throw error;
-  }
+if (
+  access.role !== AdminRole.ADMIN &&
+  (
+    data.isFeatured !== undefined ||
+    data.status !== undefined ||
+    data.visibility !== undefined
+  )
+) {
+  const error: any = new Error(
+    "Only admins can manage artist status, visibility and featured state",
+  );
+  error.statusCode = 403;
+  throw error;
+}
 
   if (access.artistId && access.artistId !== id) {
     const error: any = new Error("Artist not found");
@@ -375,23 +382,65 @@ export async function updateArtist(
 }
 
 export async function deleteArtist(id: number) {
-  // Optional but nice: delete avatar from Cloudinary on artist delete
-  const existing = await prisma.artist.findUnique({
-    where: { id },
-    select: {
-      avatarPublicId: true,
-    },
+  const deletedArtist = await prisma.$transaction(async (tx) => {
+    const artist = await tx.artist.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        avatarPublicId: true,
+      },
+    });
+
+    if (!artist) {
+      throw new Error("ARTIST_NOT_FOUND");
+    }
+
+    const [artworksCount, adminUsersCount, invitationsCount] =
+      await Promise.all([
+        tx.artwork.count({
+          where: { artistId: id },
+        }),
+        tx.adminUser.count({
+          where: { artistId: id },
+        }),
+        tx.adminInvitation.count({
+          where: {
+            artistId: id,
+            acceptedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+        }),
+      ]);
+
+    if (artworksCount > 0) {
+      throw new Error("ARTIST_HAS_ARTWORKS");
+    }
+
+    if (adminUsersCount > 0) {
+      throw new Error("ARTIST_HAS_CMS_ACCOUNTS");
+    }
+
+    if (invitationsCount > 0) {
+      throw new Error("ARTIST_HAS_INVITATIONS");
+    }
+
+    return tx.artist.delete({
+      where: { id },
+    });
   });
 
-  if (existing?.avatarPublicId) {
+  if (deletedArtist.avatarPublicId) {
     try {
-      await deleteImage(existing.avatarPublicId);
-    } catch (err) {
-      console.error("Error deleting Cloudinary avatar on artist delete:", err);
+      await deleteImage(deletedArtist.avatarPublicId);
+    } catch (error) {
+      console.error(
+        "Error deleting Cloudinary avatar on artist delete:",
+        error,
+      );
     }
   }
 
-  return prisma.artist.delete({
-    where: { id },
-  });
+  return deletedArtist;
 }

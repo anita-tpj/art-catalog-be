@@ -1,3 +1,4 @@
+import { escapeHtml } from "../utils/escapeHtml";
 import { sendEmail } from "./email.service";
 
 type SendArtistInvitationEmailParams = {
@@ -33,11 +34,11 @@ export async function sendArtistInvitationEmail({
 
       <p>
         You've been invited to manage the CMS profile for
-        <strong>${artistName}</strong>.
+        <strong>${escapeHtml(artistName)}</strong>..
       </p>
 
       <p>
-        <a href="${invitationUrl}">
+        <a href="${escapeHtml(invitationUrl)}">
           Create your CMS account
         </a>
       </p>

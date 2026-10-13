@@ -54,6 +54,7 @@ export async function getAdminInvitation(req: Request, res: Response) {
   }
 }
 
+
 export async function postAcceptAdminInvitation(req: Request, res: Response) {
   const parsed = acceptAdminInvitationSchema.safeParse(req.body);
 
@@ -68,6 +69,7 @@ export async function postAcceptAdminInvitation(req: Request, res: Response) {
     const user = await acceptArtistInvitation(
       parsed.data.token,
       parsed.data.password,
+      parsed.data.termsAccepted,
     );
 
     return res.status(201).json({
@@ -98,6 +100,12 @@ export async function postAcceptAdminInvitation(req: Request, res: Response) {
       });
     }
 
+    if (error?.message === "TERMS_NOT_ACCEPTED") {
+      return res.status(400).json({
+        message: "You must accept the Terms of Use",
+      });
+    }
+
     console.error("postAcceptAdminInvitation error:", error);
 
     return res.status(500).json({
@@ -105,6 +113,7 @@ export async function postAcceptAdminInvitation(req: Request, res: Response) {
     });
   }
 }
+
 
 export async function postArtistInvitation(req: Request, res: Response) {
   const artistId = Number(req.params.id);

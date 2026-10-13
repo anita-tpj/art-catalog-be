@@ -6,6 +6,7 @@ import { sendArtistInvitationEmail } from "./artistInvitationEmail.service";
 import { sendWelcomeEmail } from "./welcomeEmail.service";
 
 const INVITATION_TTL_HOURS = 48;
+const TERMS_VERSION = "1.0";
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -128,7 +129,15 @@ export async function getInvitationByToken(token: string) {
   return invitation;
 }
 
-export async function acceptArtistInvitation(token: string, password: string) {
+export async function acceptArtistInvitation(
+  token: string,
+  password: string,
+  termsAccepted: boolean,
+) {
+  if (termsAccepted !== true) {
+    throw new Error("TERMS_NOT_ACCEPTED");
+  }
+
   const invitation = await getInvitationByToken(token);
 
   const existingUser = await prisma.adminUser.findUnique({
@@ -142,6 +151,8 @@ export async function acceptArtistInvitation(token: string, password: string) {
   const passwordHash = await bcrypt.hash(password, 10);
 
   const user = await prisma.$transaction(async (tx) => {
+    const now = new Date();
+
     const createdUser = await tx.adminUser.create({
       data: {
         email: invitation.email,
@@ -149,6 +160,8 @@ export async function acceptArtistInvitation(token: string, password: string) {
         role: invitation.role,
         artistId: invitation.artistId,
         isActive: true,
+        termsAcceptedAt: now,
+        termsAcceptedVersion: TERMS_VERSION,
       },
       select: {
         id: true,
@@ -162,12 +175,13 @@ export async function acceptArtistInvitation(token: string, password: string) {
     await tx.adminInvitation.update({
       where: { id: invitation.id },
       data: {
-        acceptedAt: new Date(),
+        acceptedAt: now,
       },
     });
 
     return createdUser;
   });
+
   try {
     await sendWelcomeEmail({
       email: invitation.email,

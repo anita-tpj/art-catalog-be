@@ -7,7 +7,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "retention:dry-run": "node dist/jobs/dataRetention.job.js",
+    "retention:cleanup": "RETENTION_DRY_RUN=false node dist/jobs/dataRetention.job.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
