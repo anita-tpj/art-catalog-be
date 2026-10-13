@@ -1,3 +1,4 @@
+import { escapeHtml } from "../utils/escapeHtml";
 import { sendEmail } from "./email.service";
 
 type SendWelcomeEmailParams = {
@@ -28,7 +29,7 @@ export async function sendWelcomeEmail({
       <h1>Welcome to Creative Atlas</h1>
 
       <p>
-        Your CMS account for <strong>${artistName}</strong> is ready.
+        Your CMS account for <strong>${escapeHtml(artistName)}</strong> is ready.
       </p>
 
       <p>
@@ -36,7 +37,7 @@ export async function sendWelcomeEmail({
       </p>
 
       <p>
-        <a href="${loginUrl}">
+        <a href="${escapeHtml(loginUrl)}">
           Sign in to Creative Atlas
         </a>
       </p>

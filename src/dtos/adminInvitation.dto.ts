@@ -12,6 +12,7 @@ export type CreateAdminInvitationDto = z.infer<
 export const acceptAdminInvitationSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8).max(100),
+  termsAccepted: z.literal(true),
 });
 
 export type AcceptAdminInvitationDto = z.infer<

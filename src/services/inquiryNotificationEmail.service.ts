@@ -1,3 +1,4 @@
+import { escapeHtml } from "../utils/escapeHtml";
 import { sendEmail } from "./email.service";
 
 type SendInquiryNotificationEmailParams = {
@@ -28,7 +29,7 @@ export async function sendInquiryNotificationEmail({
   const inquiryUrl = `${getFrontendUrl()}/admin/inquiries/${inquiryId}`;
 
   const artworkContext = artworkTitle
-    ? `<p>Regarding: <strong>${artworkTitle}</strong></p>`
+    ? `<p>Regarding: <strong>${escapeHtml(artworkTitle)}</strong></p>`
     : "";
 
   return sendEmail({
@@ -38,14 +39,14 @@ export async function sendInquiryNotificationEmail({
       <h1>You received a new inquiry</h1>
 
       <p>
-        <strong>${senderName}</strong> sent a new inquiry to
-        <strong>${artistName}</strong>.
+        <strong>${escapeHtml(senderName)}</strong> sent a new inquiry to
+        <strong>${escapeHtml(artistName)}</strong>.
       </p>
 
       ${artworkContext}
 
       <p>
-        <a href="${inquiryUrl}">
+        <a href="${escapeHtml(inquiryUrl)}">
           View inquiry
         </a>
       </p>

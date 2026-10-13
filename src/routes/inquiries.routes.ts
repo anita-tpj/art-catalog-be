@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createInquiry,
+  deleteInquiry,
   getInquiriesStats,
   getInquiry,
   getPaginatedInquiries,
@@ -27,5 +28,7 @@ router.get(
 router.get("/:id", requireRoles(["ADMIN", "EDITOR", "VIEWER"]), getInquiry);
 
 router.put("/:id", requireRoles(["ADMIN", "EDITOR"]), updateInquiry);
+
+router.delete("/:id", requireRoles(["ADMIN"]), deleteInquiry);
 
 export default router;

@@ -254,3 +254,11 @@ export async function updateInquiry(
     },
   });
 }
+
+export async function deleteInquiry(id: number) {
+  const result = await prisma.inquiry.deleteMany({
+    where: { id },
+  });
+
+  return result.count > 0;
+}

@@ -155,12 +155,47 @@ export async function deleteArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid artist id");
-    error.statusCode = 400;
-    throw error;
+    return res.status(400).json({
+      message: "Invalid artist ID",
+    });
   }
 
-  await artistService.deleteArtist(id);
+  try {
+    await artistService.deleteArtist(id);
 
-  res.status(204).send();
+    return res.status(204).send();
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      switch (error.message) {
+        case "ARTIST_NOT_FOUND":
+          return res.status(404).json({
+            message: "Artist not found.",
+          });
+
+        case "ARTIST_HAS_ARTWORKS":
+          return res.status(409).json({
+            message:
+              "Cannot delete this artist because they have artworks. Remove the artworks first.",
+          });
+
+        case "ARTIST_HAS_CMS_ACCOUNTS":
+          return res.status(409).json({
+            message:
+              "Cannot delete this artist because they have CMS accounts. Remove the CMS accounts first.",
+          });
+
+        case "ARTIST_HAS_INVITATIONS":
+          return res.status(409).json({
+            message:
+              "Cannot delete this artist because they have CMS invitations. Revoke the invitations first.",
+          });
+      }
+    }
+
+    console.error("deleteArtist error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 }

@@ -101,3 +101,23 @@ export async function getInquiriesStats(req: AdminRequest, res: Response) {
 
   return res.json(stats);
 }
+
+export async function deleteInquiry(req: AdminRequest, res: Response) {
+  const id = parseId(req);
+
+  if (id === null || !Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({
+      message: "Invalid id",
+    });
+  }
+
+  const deleted = await inquiriesService.deleteInquiry(id);
+
+  if (!deleted) {
+    return res.status(404).json({
+      message: "Inquiry not found",
+    });
+  }
+
+  return res.status(204).send();
+}
