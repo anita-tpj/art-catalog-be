@@ -283,20 +283,18 @@ export async function updateArtist(
   data: UpdateArtistDTO,
   access: ArtistAccess,
 ) {
-if (
-  access.role !== AdminRole.ADMIN &&
-  (
-    data.isFeatured !== undefined ||
-    data.status !== undefined ||
-    data.visibility !== undefined
-  )
-) {
-  const error: any = new Error(
-    "Only admins can manage artist status, visibility and featured state",
-  );
-  error.statusCode = 403;
-  throw error;
-}
+  if (
+    access.role !== AdminRole.ADMIN &&
+    (data.isFeatured !== undefined ||
+      data.status !== undefined ||
+      data.visibility !== undefined)
+  ) {
+    const error: any = new Error(
+      "Only admins can manage artist status, visibility and featured state",
+    );
+    error.statusCode = 403;
+    throw error;
+  }
 
   if (access.artistId && access.artistId !== id) {
     const error: any = new Error("Artist not found");
@@ -425,6 +423,11 @@ export async function deleteArtist(id: number) {
     if (invitationsCount > 0) {
       throw new Error("ARTIST_HAS_INVITATIONS");
     }
+
+    // Delete inquiries associated with this artist
+    await tx.inquiry.deleteMany({
+      where: { artistId: id },
+    });
 
     return tx.artist.delete({
       where: { id },
