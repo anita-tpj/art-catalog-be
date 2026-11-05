@@ -1,5 +1,6 @@
 // src/controllers/authAdmin.controller.ts
 import type { Request, Response } from "express";
+import { forgotAdminPasswordSchema, resetAdminPasswordSchema } from "../dtos/adminPasswordReset.dto";
 import {
   clearAdminSessionCookie,
   getAdminSessionId,
@@ -10,6 +11,10 @@ import {
   adminLogout,
   adminMeFromSession,
 } from "../services/adminAuth.service";
+import {
+  requestAdminPasswordReset,
+  resetAdminPassword,
+} from "../services/adminPasswordReset.service";
 
 export async function postAdminLogin(req: Request, res: Response) {
   const { email, password } = req.body ?? {};
@@ -67,5 +72,64 @@ export async function getAdminMe(req: Request, res: Response) {
   } catch (e) {
     console.error("getAdminMe error:", e);
     return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export async function postAdminForgotPassword(req: Request, res: Response) {
+  const parsed = forgotAdminPasswordSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid payload",
+      errors: parsed.error.flatten(),
+    });
+  }
+
+  try {
+    await requestAdminPasswordReset(parsed.data.email);
+
+    return res.status(200).json({
+      message: "If an account exists, a password reset link will be sent.",
+    });
+  } catch (error) {
+    console.error("postAdminForgotPassword error:", error);
+
+    // Do not expose email provider or account details.
+    return res.status(200).json({
+      message: "If an account exists, a password reset link will be sent.",
+    });
+  }
+}
+
+export async function postAdminResetPassword(req: Request, res: Response) {
+  const parsed = resetAdminPasswordSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({
+      message: "Invalid payload",
+      errors: parsed.error.flatten(),
+    });
+  }
+
+  try {
+    await resetAdminPassword(parsed.data.token, parsed.data.password);
+
+    clearAdminSessionCookie(res);
+
+    return res.status(200).json({
+      message: "Password updated successfully",
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "INVALID_RESET_TOKEN") {
+      return res.status(400).json({
+        message: "Invalid or expired reset link",
+      });
+    }
+
+    console.error("postAdminResetPassword error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 }
