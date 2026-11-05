@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { passwordSchema } from "./password.dto";
 
 export const createAdminInvitationSchema = z.object({
   email: z.string().trim().email().max(200),
@@ -11,7 +12,7 @@ export type CreateAdminInvitationDto = z.infer<
 
 export const acceptAdminInvitationSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8).max(100),
+  password: passwordSchema,
   termsAccepted: z.literal(true),
 });
 
