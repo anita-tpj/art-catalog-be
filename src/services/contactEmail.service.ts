@@ -28,6 +28,7 @@ export async function sendContactEmail({
 
   return sendEmail({
     to: getContactEmail(),
+    replyTo: email,
     subject: "New contact message on Creative Atlas",
     html: `
       <h1>New contact message</h1>

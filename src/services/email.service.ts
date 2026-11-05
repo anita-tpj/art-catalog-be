@@ -14,14 +14,21 @@ type SendEmailParams = {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 };
 
-export async function sendEmail({ to, subject, html }: SendEmailParams) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  replyTo,
+}: SendEmailParams) {
   const { data, error } = await resend.emails.send({
     from: getEmailFrom(),
     to,
     subject,
     html,
+    ...(replyTo ? { replyTo } : {}),
   });
 
   if (error) {
