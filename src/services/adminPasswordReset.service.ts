@@ -1,7 +1,8 @@
-
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { ERROR_CODES } from "../constants/errorCodes";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 import { sendPasswordResetEmail } from "./passwordResetEmail.service";
 
 const RESET_TTL_MINUTES = 30;
@@ -14,9 +15,7 @@ function resetExpiresAt(): Date {
   return new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000);
 }
 
-export async function requestAdminPasswordReset(
-  email: string,
-): Promise<void> {
+export async function requestAdminPasswordReset(email: string): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
 
   const user = await prisma.adminUser.findUnique({
@@ -70,7 +69,11 @@ export async function resetAdminPassword(
   password: string,
 ): Promise<void> {
   if (!/^[a-f0-9]{64}$/.test(token)) {
-    throw new Error("INVALID_RESET_TOKEN");
+    throw new AppError(
+      ERROR_CODES.INVALID_RESET_TOKEN,
+      400,
+      "Invalid or expired reset link",
+    );
   }
 
   const tokenHash = hashToken(token);
@@ -95,7 +98,11 @@ export async function resetAdminPassword(
       resetToken.expiresAt <= now ||
       !resetToken.adminUser.isActive
     ) {
-      throw new Error("INVALID_RESET_TOKEN");
+      throw new AppError(
+        ERROR_CODES.INVALID_RESET_TOKEN,
+        400,
+        "Invalid or expired reset link",
+      );
     }
 
     // Only one concurrent request can claim this token.
@@ -107,7 +114,11 @@ export async function resetAdminPassword(
     });
 
     if (claimed.count !== 1) {
-      throw new Error("INVALID_RESET_TOKEN");
+      throw new AppError(
+        ERROR_CODES.INVALID_RESET_TOKEN,
+        400,
+        "Invalid or expired reset link",
+      );
     }
 
     await tx.adminUser.update({

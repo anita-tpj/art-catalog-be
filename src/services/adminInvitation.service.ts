@@ -1,7 +1,9 @@
 import { AdminRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { ERROR_CODES } from "../constants/errorCodes";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 import { sendArtistInvitationEmail } from "./artistInvitationEmail.service";
 import { sendWelcomeEmail } from "./welcomeEmail.service";
 
@@ -28,7 +30,7 @@ export async function createArtistInvitation(artistId: number, email: string) {
   });
 
   if (!artist) {
-    throw new Error("ARTIST_NOT_FOUND");
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404, "Artist not found");
   }
 
   const existingUser = await prisma.adminUser.findUnique({
@@ -36,7 +38,11 @@ export async function createArtistInvitation(artistId: number, email: string) {
   });
 
   if (existingUser) {
-    throw new Error("ACCOUNT_ALREADY_EXISTS");
+    throw new AppError(
+      ERROR_CODES.ACCOUNT_ALREADY_EXISTS,
+      409,
+      "An account with this email already exists",
+    );
   }
 
   const existingInvitation = await prisma.adminInvitation.findFirst({
@@ -50,7 +56,11 @@ export async function createArtistInvitation(artistId: number, email: string) {
   });
 
   if (existingInvitation) {
-    throw new Error("INVITATION_ALREADY_EXISTS");
+    throw new AppError(
+      ERROR_CODES.INVITATION_ALREADY_EXISTS,
+      409,
+      "An active invitation already exists for this email",
+    );
   }
 
   const token = crypto.randomBytes(32).toString("hex");
@@ -115,15 +125,27 @@ export async function getInvitationByToken(token: string) {
   });
 
   if (!invitation) {
-    throw new Error("INVALID_INVITATION");
+    throw new AppError(
+      ERROR_CODES.INVALID_INVITATION,
+      404,
+      "Invitation not found",
+    );
   }
 
   if (invitation.acceptedAt) {
-    throw new Error("INVITATION_ALREADY_ACCEPTED");
+    throw new AppError(
+      ERROR_CODES.INVITATION_ALREADY_ACCEPTED,
+      410,
+      "Invitation has already been accepted",
+    );
   }
 
   if (invitation.expiresAt <= new Date()) {
-    throw new Error("INVITATION_EXPIRED");
+    throw new AppError(
+      ERROR_CODES.INVITATION_EXPIRED,
+      410,
+      "Invitation has expired",
+    );
   }
 
   return invitation;
@@ -135,7 +157,11 @@ export async function acceptArtistInvitation(
   termsAccepted: boolean,
 ) {
   if (termsAccepted !== true) {
-    throw new Error("TERMS_NOT_ACCEPTED");
+    throw new AppError(
+      ERROR_CODES.TERMS_NOT_ACCEPTED,
+      400,
+      "You must accept the Terms of Use",
+    );
   }
 
   const invitation = await getInvitationByToken(token);
@@ -145,7 +171,11 @@ export async function acceptArtistInvitation(
   });
 
   if (existingUser) {
-    throw new Error("ACCOUNT_ALREADY_EXISTS");
+    throw new AppError(
+      ERROR_CODES.ACCOUNT_ALREADY_EXISTS,
+      409,
+      "An account with this email already exists",
+    );
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -201,7 +231,7 @@ export async function getArtistCmsAccess(artistId: number) {
   });
 
   if (!artist) {
-    throw new Error("ARTIST_NOT_FOUND");
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404, "Artist not found");
   }
 
   const accounts = await prisma.adminUser.findMany({
@@ -275,11 +305,19 @@ export async function revokeArtistInvitation(
   });
 
   if (!invitation) {
-    throw new Error("INVITATION_NOT_FOUND");
+    throw new AppError(
+      ERROR_CODES.INVITATION_NOT_FOUND,
+      404,
+      "Invitation not found",
+    );
   }
 
   if (invitation.acceptedAt) {
-    throw new Error("INVITATION_ALREADY_ACCEPTED");
+    throw new AppError(
+      ERROR_CODES.INVITATION_ALREADY_ACCEPTED,
+      409,
+      "Accepted invitations cannot be revoked",
+    );
   }
 
   await prisma.adminInvitation.delete({

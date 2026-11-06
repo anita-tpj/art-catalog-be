@@ -1,6 +1,9 @@
-// src/controllers/authAdmin.controller.ts
 import type { Request, Response } from "express";
-import { forgotAdminPasswordSchema, resetAdminPasswordSchema } from "../dtos/adminPasswordReset.dto";
+import { ERROR_CODES } from "../constants/errorCodes";
+import {
+  forgotAdminPasswordSchema,
+  resetAdminPasswordSchema,
+} from "../dtos/adminPasswordReset.dto";
 import {
   clearAdminSessionCookie,
   getAdminSessionId,
@@ -15,30 +18,23 @@ import {
   requestAdminPasswordReset,
   resetAdminPassword,
 } from "../services/adminPasswordReset.service";
+import { AppError } from "../utils/AppError";
 
 export async function postAdminLogin(req: Request, res: Response) {
   const { email, password } = req.body ?? {};
 
   if (typeof email !== "string" || typeof password !== "string") {
-    return res.status(400).json({ message: "Invalid payload" });
+    throw new AppError(ERROR_CODES.VALIDATION_ERROR, 400, "Invalid payload");
   }
 
-  try {
-    const { sessionId, user } = await adminLogin(
-      email.trim().toLowerCase(),
-      password,
-    );
+  const { sessionId, user } = await adminLogin(
+    email.trim().toLowerCase(),
+    password,
+  );
 
-    setAdminSessionCookie(res, sessionId);
+  setAdminSessionCookie(res, sessionId);
 
-    return res.status(200).json({ user });
-  } catch (e: any) {
-    if (e?.message === "INVALID_CREDENTIALS") {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    console.error("postAdminLogin error:", e);
-    return res.status(500).json({ message: "Internal server error" });
-  }
+  return res.status(200).json({ user });
 }
 
 export async function postAdminLogout(req: Request, res: Response) {
@@ -48,88 +44,54 @@ export async function postAdminLogout(req: Request, res: Response) {
     if (sessionId) {
       await adminLogout(sessionId);
     }
-
-    clearAdminSessionCookie(res);
-    return res.status(204).send();
-  } catch (e) {
-    console.error("postAdminLogout error:", e);
-    clearAdminSessionCookie(res);
-    return res.status(204).send();
+  } catch (error) {
+    // Preserve existing behavior: clear the browser cookie
+    // even if server-side session revocation fails.
+    console.error("postAdminLogout error:", error);
   }
+
+  clearAdminSessionCookie(res);
+
+  return res.status(204).send();
 }
 
 export async function getAdminMe(req: Request, res: Response) {
-  try {
-    const sessionId = getAdminSessionId(req);
-    const user = await adminMeFromSession(sessionId);
+  const sessionId = getAdminSessionId(req);
+  const user = await adminMeFromSession(sessionId);
 
-    if (!user) {
-      clearAdminSessionCookie(res);
-      return res.status(401).json({ message: "Unauthenticated" });
-    }
+  if (!user) {
+    clearAdminSessionCookie(res);
 
-    return res.status(200).json({ user });
-  } catch (e) {
-    console.error("getAdminMe error:", e);
-    return res.status(500).json({ message: "Internal server error" });
+    throw new AppError(ERROR_CODES.UNAUTHORIZED, 401, "Unauthenticated");
   }
+
+  return res.status(200).json({ user });
 }
 
 export async function postAdminForgotPassword(req: Request, res: Response) {
-  const parsed = forgotAdminPasswordSchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({
-      message: "Invalid payload",
-      errors: parsed.error.flatten(),
-    });
-  }
+  const { email } = forgotAdminPasswordSchema.parse(req.body);
 
   try {
-    await requestAdminPasswordReset(parsed.data.email);
-
-    return res.status(200).json({
-      message: "If an account exists, a password reset link will be sent.",
-    });
+    await requestAdminPasswordReset(email);
   } catch (error) {
+    // Do not expose whether an account exists or whether
+    // sending the password reset email failed.
     console.error("postAdminForgotPassword error:", error);
-
-    // Do not expose email provider or account details.
-    return res.status(200).json({
-      message: "If an account exists, a password reset link will be sent.",
-    });
   }
+
+  return res.status(200).json({
+    message: "If an account exists, a password reset link will be sent.",
+  });
 }
 
 export async function postAdminResetPassword(req: Request, res: Response) {
-  const parsed = resetAdminPasswordSchema.safeParse(req.body);
+  const { token, password } = resetAdminPasswordSchema.parse(req.body);
 
-  if (!parsed.success) {
-    return res.status(400).json({
-      message: "Invalid payload",
-      errors: parsed.error.flatten(),
-    });
-  }
+  await resetAdminPassword(token, password);
 
-  try {
-    await resetAdminPassword(parsed.data.token, parsed.data.password);
+  clearAdminSessionCookie(res);
 
-    clearAdminSessionCookie(res);
-
-    return res.status(200).json({
-      message: "Password updated successfully",
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error && error.message === "INVALID_RESET_TOKEN") {
-      return res.status(400).json({
-        message: "Invalid or expired reset link",
-      });
-    }
-
-    console.error("postAdminResetPassword error:", error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
+  return res.status(200).json({
+    message: "Password updated successfully",
+  });
 }

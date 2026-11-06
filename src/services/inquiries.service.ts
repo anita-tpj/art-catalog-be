@@ -1,10 +1,12 @@
 import { Prisma } from "@prisma/client";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   CreateInquiryDTO,
   InquiryListQueryDTO,
   UpdateInquiryDTO,
 } from "../dtos/inquiry.dto";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 import { sendInquiryNotificationEmail } from "./inquiryNotificationEmail.service";
 
 export type InquiryQuery = InquiryListQueryDTO;
@@ -142,9 +144,7 @@ export async function createInquiry(data: CreateInquiryDTO) {
     });
 
     if (!artwork) {
-      const error: any = new Error("Artwork not found");
-      error.statusCode = 404;
-      throw error;
+      throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
     }
 
     artworkId = artwork.id;
@@ -164,16 +164,12 @@ export async function createInquiry(data: CreateInquiryDTO) {
     });
 
     if (!artist) {
-      const error: any = new Error("Artist not found");
-      error.statusCode = 404;
-      throw error;
+      throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
     }
 
     artistId = artist.id;
   } else {
-    const error: any = new Error("Artist or artwork is required");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INQUIRY_TARGET_REQUIRED, 400);
   }
 
   const inquiry = await prisma.inquiry.create({
@@ -238,9 +234,7 @@ export async function updateInquiry(
   });
 
   if (!existing) {
-    const error: any = new Error("Inquiry not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.INQUIRY_NOT_FOUND, 404);
   }
 
   return prisma.inquiry.update({

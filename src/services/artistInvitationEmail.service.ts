@@ -34,7 +34,7 @@ export async function sendArtistInvitationEmail({
 
       <p>
         You've been invited to manage the CMS profile for
-        <strong>${escapeHtml(artistName)}</strong>..
+        <strong>${escapeHtml(artistName)}</strong>.
       </p>
 
       <p>

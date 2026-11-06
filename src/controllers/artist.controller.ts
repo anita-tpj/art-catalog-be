@@ -1,7 +1,13 @@
 import { Request, Response } from "express";
-import { ArtistListQuerySchema, createArtistSchema, updateArtistSchema } from "../dtos/artist.dto";
+import { ERROR_CODES } from "../constants/errorCodes";
+import {
+  ArtistListQuerySchema,
+  createArtistSchema,
+  updateArtistSchema,
+} from "../dtos/artist.dto";
 import { AdminRequest } from "../middlewares/requireAdmin";
 import * as artistService from "../services/artist.service";
+import { AppError } from "../utils/AppError";
 
 export async function getAllArtists(req: AdminRequest, res: Response) {
   const artists = await artistService.getAllArtists({
@@ -63,17 +69,13 @@ export async function getPublishedArtist(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid artist id");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTIST_ID, 400);
   }
 
   const artist = await artistService.getPublishedArtistById(id);
 
   if (!artist) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
 
   res.json(artist);
@@ -83,17 +85,13 @@ export async function getPublishedArtistBySlug(req: Request, res: Response) {
   const slug = req.params.slug;
 
   if (!slug) {
-    const error: any = new Error("Invalid artist slug");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTIST_SLUG, 400);
   }
 
   const artist = await artistService.getPublishedArtistBySlug(slug);
 
   if (!artist) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
 
   res.json(artist);
@@ -103,9 +101,7 @@ export async function getArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid artist id");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTIST_ID, 400);
   }
 
   const artist = await artistService.getArtistById(id, {
@@ -113,9 +109,7 @@ export async function getArtist(req: AdminRequest, res: Response) {
   });
 
   if (!artist) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
 
   res.json(artist);
@@ -136,9 +130,7 @@ export async function updateArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid artist id");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTIST_ID, 400);
   }
 
   const payload = updateArtistSchema.parse(req.body);
@@ -155,47 +147,10 @@ export async function deleteArtist(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({
-      message: "Invalid artist ID",
-    });
+    throw new AppError(ERROR_CODES.INVALID_ARTIST_ID, 400);
   }
 
-  try {
-    await artistService.deleteArtist(id);
+  await artistService.deleteArtist(id);
 
-    return res.status(204).send();
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      switch (error.message) {
-        case "ARTIST_NOT_FOUND":
-          return res.status(404).json({
-            message: "Artist not found.",
-          });
-
-        case "ARTIST_HAS_ARTWORKS":
-          return res.status(409).json({
-            message:
-              "Cannot delete this artist because they have artworks. Remove the artworks first.",
-          });
-
-        case "ARTIST_HAS_CMS_ACCOUNTS":
-          return res.status(409).json({
-            message:
-              "Cannot delete this artist because they have CMS accounts. Remove the CMS accounts first.",
-          });
-
-        case "ARTIST_HAS_INVITATIONS":
-          return res.status(409).json({
-            message:
-              "Cannot delete this artist because they have CMS invitations. Revoke the invitations first.",
-          });
-      }
-    }
-
-    console.error("deleteArtist error:", error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
+  return res.status(204).send();
 }

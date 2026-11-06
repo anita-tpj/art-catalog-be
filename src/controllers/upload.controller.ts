@@ -1,6 +1,8 @@
 import type { UploadApiResponse } from "cloudinary";
 import { Request, Response } from "express";
+import { ERROR_CODES } from "../constants/errorCodes";
 import cloudinary from "../libs/cloudinary";
+import { AppError } from "../utils/AppError";
 
 async function uploadCloudinaryImage(
   file: Express.Multer.File,
@@ -14,7 +16,9 @@ async function uploadCloudinaryImage(
         type: "private",
       },
       (error, result: UploadApiResponse | undefined) => {
-        if (error || !result) return reject(error);
+        if (error || !result) {
+          return reject(error ?? new Error("Cloudinary upload failed"));
+        }
 
         const url = cloudinary.url(result.public_id, {
           secure: true,
@@ -42,16 +46,15 @@ async function uploadCloudinaryImage(
  */
 export async function uploadArtistAvatar(req: Request, res: Response) {
   const file = req.file;
-  if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-  try {
-    const folder = process.env.CLOUDINARY_ARTISTS_FOLDER!;
-    const result = await uploadCloudinaryImage(file, folder);
-    return res.status(201).json(result);
-  } catch (err) {
-    console.error("Artist upload failed:", err);
-    return res.status(500).json({ message: "Failed to upload avatar" });
+  if (!file) {
+    throw new AppError(ERROR_CODES.NO_FILE_UPLOADED, 400, "No file uploaded");
   }
+
+  const folder = process.env.CLOUDINARY_ARTISTS_FOLDER!;
+  const result = await uploadCloudinaryImage(file, folder);
+
+  return res.status(201).json(result);
 }
 
 /**
@@ -59,14 +62,13 @@ export async function uploadArtistAvatar(req: Request, res: Response) {
  */
 export async function uploadArtworkImage(req: Request, res: Response) {
   const file = req.file;
-  if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-  try {
-    const folder = process.env.CLOUDINARY_ARTWORKS_FOLDER!;
-    const result = await uploadCloudinaryImage(file, folder);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error("Artwork upload failed:", err);
-    res.status(500).json({ message: "Failed to upload image" });
+  if (!file) {
+    throw new AppError(ERROR_CODES.NO_FILE_UPLOADED, 400, "No file uploaded");
   }
+
+  const folder = process.env.CLOUDINARY_ARTWORKS_FOLDER!;
+  const result = await uploadCloudinaryImage(file, folder);
+
+  return res.status(201).json(result);
 }
