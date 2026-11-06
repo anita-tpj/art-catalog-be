@@ -1,11 +1,26 @@
-import { z } from "zod";
 import { InquiryStatus } from "@prisma/client";
+import { z } from "zod";
 
 export const createInquirySchema = z
   .object({
-    name: z.string().trim().min(1, "Name is required").max(100),
-    email: z.string().trim().email("Invalid email").max(200),
-    message: z.string().trim().min(5, "Message is too short").max(5000),
+    name: z
+      .string({ error: "Name is required" })
+      .trim()
+      .min(1, "Name is required")
+      .max(100, "Name is too long"),
+
+    email: z
+      .string({ error: "Email is required" })
+      .trim()
+      .min(1, "Email is required")
+      .email("Invalid email")
+      .max(200, "Email is too long"),
+
+    message: z
+      .string({ error: "Message is required" })
+      .trim()
+      .min(5, "Message is too short")
+      .max(5000, "Message is too long"),
 
     artistId: z.number().int().positive().optional(),
     artworkId: z.number().int().positive().optional(),
@@ -24,7 +39,9 @@ export const InquiryListQuerySchema = z.object({
 });
 
 export const UpdateInquirySchema = z.object({
-  status: z.nativeEnum(InquiryStatus),
+  status: z.nativeEnum(InquiryStatus, {
+    error: "Inquiry status is required",
+  }),
 });
 
 export type CreateInquiryDTO = z.infer<typeof createInquirySchema>;

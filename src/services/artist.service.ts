@@ -1,4 +1,5 @@
 import { AdminRole, ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   ArtistListQueryDTO,
   CreateArtistDTO,
@@ -7,6 +8,7 @@ import {
 import { deleteImage } from "../libs/cloudinary";
 import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 
 export type ArtistQuery = ArtistListQueryDTO;
 
@@ -217,19 +219,13 @@ const RESERVED_ARTIST_SLUGS = new Set([
 
 function validateArtistSlug(slug: string) {
   if (RESERVED_ARTIST_SLUGS.has(slug)) {
-    const error: any = new Error("This slug is reserved");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_SLUG_RESERVED, 400);
   }
 }
 
 function requireSlugForPublish(slug: string | null | undefined) {
   if (!slug) {
-    const error: any = new Error(
-      "Artist must have a slug before being published",
-    );
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_SLUG_REQUIRED_FOR_PUBLISH, 400);
   }
 }
 
@@ -238,11 +234,7 @@ export async function createArtist(
   access: ArtistAccess,
 ) {
   if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
-    const error: any = new Error(
-      "Only global admins can manage featured artists",
-    );
-    error.statusCode = 403;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_FEATURED_ADMIN_ONLY, 403);
   }
 
   if (data.slug) {
@@ -269,9 +261,7 @@ export async function createArtist(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      const error: any = new Error("This slug is already taken");
-      error.statusCode = 409;
-      throw error;
+      throw new AppError(ERROR_CODES.ARTIST_SLUG_ALREADY_TAKEN, 409);
     }
 
     throw err;
@@ -289,18 +279,13 @@ export async function updateArtist(
       data.status !== undefined ||
       data.visibility !== undefined)
   ) {
-    const error: any = new Error(
-      "Only admins can manage artist status, visibility and featured state",
-    );
-    error.statusCode = 403;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_MANAGEMENT_ADMIN_ONLY, 403);
   }
 
   if (access.artistId && access.artistId !== id) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
+
   // Fetch current avatarPublicId to decide if we need to delete old image
   const existing = await prisma.artist.findUnique({
     where: { id },
@@ -312,9 +297,7 @@ export async function updateArtist(
   });
 
   if (!existing) {
-    const error: any = new Error("Artist not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
 
   if (
@@ -322,11 +305,7 @@ export async function updateArtist(
     data.slug !== undefined &&
     data.slug !== existing.slug
   ) {
-    const error: any = new Error(
-      "Slug cannot be changed after the artist has been published",
-    );
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTIST_SLUG_LOCKED, 400);
   }
 
   if (data.slug) {
@@ -370,9 +349,7 @@ export async function updateArtist(
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2002"
     ) {
-      const error: any = new Error("This slug is already taken");
-      error.statusCode = 409;
-      throw error;
+      throw new AppError(ERROR_CODES.ARTIST_SLUG_ALREADY_TAKEN, 409);
     }
 
     throw err;
@@ -390,7 +367,7 @@ export async function deleteArtist(id: number) {
     });
 
     if (!artist) {
-      throw new Error("ARTIST_NOT_FOUND");
+      throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
     }
 
     const [artworksCount, adminUsersCount, invitationsCount] =
@@ -413,15 +390,15 @@ export async function deleteArtist(id: number) {
       ]);
 
     if (artworksCount > 0) {
-      throw new Error("ARTIST_HAS_ARTWORKS");
+      throw new AppError(ERROR_CODES.ARTIST_HAS_ARTWORKS, 409);
     }
 
     if (adminUsersCount > 0) {
-      throw new Error("ARTIST_HAS_CMS_ACCOUNTS");
+      throw new AppError(ERROR_CODES.ARTIST_HAS_CMS_ACCOUNTS, 409);
     }
 
     if (invitationsCount > 0) {
-      throw new Error("ARTIST_HAS_INVITATIONS");
+      throw new AppError(ERROR_CODES.ARTIST_HAS_INVITATIONS, 409);
     }
 
     // Delete inquiries associated with this artist

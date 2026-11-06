@@ -1,12 +1,17 @@
-
+import { ERROR_CODES } from "../constants/errorCodes";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 
 export async function deactivateAdminUser(
   userId: string,
   currentAdminId: string,
 ) {
   if (userId === currentAdminId) {
-    throw new Error("CANNOT_MODIFY_SELF");
+    throw new AppError(
+      ERROR_CODES.CANNOT_MODIFY_SELF,
+      403,
+      "You cannot modify your own account.",
+    );
   }
 
   return prisma.$transaction(async (tx) => {
@@ -15,11 +20,19 @@ export async function deactivateAdminUser(
     });
 
     if (!user) {
-      throw new Error("ADMIN_USER_NOT_FOUND");
+      throw new AppError(
+        ERROR_CODES.ADMIN_USER_NOT_FOUND,
+        404,
+        "Admin user not found.",
+      );
     }
 
     if (user.role === "ADMIN") {
-      throw new Error("CANNOT_MODIFY_ADMIN");
+      throw new AppError(
+        ERROR_CODES.CANNOT_MODIFY_ADMIN,
+        403,
+        "You cannot modify another administrator account.",
+      );
     }
 
     const updatedUser = await tx.adminUser.update({
@@ -52,7 +65,11 @@ export async function activateAdminUser(
   currentAdminId: string,
 ) {
   if (userId === currentAdminId) {
-    throw new Error("CANNOT_MODIFY_SELF");
+    throw new AppError(
+      ERROR_CODES.CANNOT_MODIFY_SELF,
+      403,
+      "You cannot modify your own account.",
+    );
   }
 
   const user = await prisma.adminUser.findUnique({
@@ -60,11 +77,19 @@ export async function activateAdminUser(
   });
 
   if (!user) {
-    throw new Error("ADMIN_USER_NOT_FOUND");
+    throw new AppError(
+      ERROR_CODES.ADMIN_USER_NOT_FOUND,
+      404,
+      "Admin user not found.",
+    );
   }
 
   if (user.role === "ADMIN") {
-    throw new Error("CANNOT_MODIFY_ADMIN");
+    throw new AppError(
+      ERROR_CODES.CANNOT_MODIFY_ADMIN,
+      403,
+      "You cannot modify another administrator account.",
+    );
   }
 
   return prisma.adminUser.update({
@@ -79,12 +104,13 @@ export async function activateAdminUser(
   });
 }
 
-export async function deleteAdminUser(
-  userId: string,
-  currentAdminId: string,
-) {
+export async function deleteAdminUser(userId: string, currentAdminId: string) {
   if (userId === currentAdminId) {
-    throw new Error("CANNOT_MODIFY_SELF");
+    throw new AppError(
+      ERROR_CODES.CANNOT_MODIFY_SELF,
+      403,
+      "You cannot modify your own account.",
+    );
   }
 
   const user = await prisma.adminUser.findUnique({
@@ -92,11 +118,19 @@ export async function deleteAdminUser(
   });
 
   if (!user) {
-    throw new Error("ADMIN_USER_NOT_FOUND");
+    throw new AppError(
+      ERROR_CODES.ADMIN_USER_NOT_FOUND,
+      404,
+      "Admin user not found.",
+    );
   }
 
   if (user.role === "ADMIN") {
-    throw new Error("CANNOT_MODIFY_ADMIN");
+    throw new AppError(
+      ERROR_CODES.CANNOT_MODIFY_ADMIN,
+      403,
+      "You cannot modify another administrator account.",
+    );
   }
 
   await prisma.adminUser.delete({

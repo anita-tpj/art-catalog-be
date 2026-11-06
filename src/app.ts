@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import "express-async-errors";
+import { ERROR_CODES } from "./constants/errorCodes";
 import logger from "./libs/logger";
 import { errorHandler } from "./middlewares/errorHandler";
 import { requireRoles } from "./middlewares/requireAdmin";
@@ -16,6 +17,7 @@ import contactRouter from "./routes/contact.routes";
 import healthRouter from "./routes/health.routes";
 import inquiriesRouter from "./routes/inquiries.routes";
 import uploadRouter from "./routes/upload.routes";
+import { AppError } from "./utils/AppError";
 
 dotenv.config();
 
@@ -61,19 +63,32 @@ app.use("/api/contact", contactRouter);
 app.use("/api/uploads", uploadRouter);
 app.use("/api/health", healthRouter);
 
-// CORS error handler (nice-to-have)
-app.use((err: any, _req: any, res: any, next: any) => {
-  if (err?.message?.startsWith("CORS blocked for origin:")) {
-    return res.status(403).json({ message: err.message });
-  }
-  next(err);
-});
-
-app.use(errorHandler);
-
 app.get("/", (_req, res) => {
   res.send("ArtCatalog API running");
 });
+
+// CORS error handler (nice-to-have)
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    _res: express.Response,
+    next: express.NextFunction,
+  ) => {
+    if (
+      err instanceof Error &&
+      err.message.startsWith("CORS blocked for origin:")
+    ) {
+      return next(
+        new AppError(ERROR_CODES.FORBIDDEN, 403, "Origin not allowed"),
+      );
+    }
+
+    next(err);
+  },
+);
+
+app.use(errorHandler);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 5000;
 app.listen(port, "0.0.0.0", () => {

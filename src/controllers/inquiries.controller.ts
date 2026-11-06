@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   createInquirySchema,
   InquiryListQuerySchema,
@@ -6,10 +7,16 @@ import {
 } from "../dtos/inquiry.dto";
 import type { AdminRequest } from "../middlewares/requireAdmin";
 import * as inquiriesService from "../services/inquiries.service";
+import { AppError } from "../utils/AppError";
 
-function parseId(req: Request) {
+function parseId(req: Request): number {
   const id = Number(req.params.id);
-  return Number.isFinite(id) ? id : null;
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new AppError(ERROR_CODES.INVALID_INQUIRY_ID, 400);
+  }
+
+  return id;
 }
 
 export async function getAllInquiries(req: AdminRequest, res: Response) {
@@ -41,53 +48,30 @@ export async function getPaginatedInquiries(req: AdminRequest, res: Response) {
 export async function getInquiry(req: AdminRequest, res: Response) {
   const id = parseId(req);
 
-  if (!id) {
-    return res.status(400).json({ message: "Invalid id" });
-  }
-
   const inquiry = await inquiriesService.getInquiryById(id, {
     artistId: req.admin!.artistId,
   });
 
   if (!inquiry) {
-    return res.status(404).json({ message: "Not found" });
+    throw new AppError(ERROR_CODES.INQUIRY_NOT_FOUND, 404);
   }
 
   return res.json(inquiry);
 }
 
 export async function createInquiry(req: Request, res: Response) {
-  const parsed = createInquirySchema.safeParse(req.body);
+  const payload = createInquirySchema.parse(req.body);
 
-  if (!parsed.success) {
-    return res.status(400).json({
-      message: "Validation error",
-      issues: parsed.error.issues,
-    });
-  }
-
-  const inquiry = await inquiriesService.createInquiry(parsed.data);
+  const inquiry = await inquiriesService.createInquiry(payload);
 
   return res.status(201).json(inquiry);
 }
 
 export async function updateInquiry(req: AdminRequest, res: Response) {
   const id = parseId(req);
+  const payload = UpdateInquirySchema.parse(req.body);
 
-  if (!id) {
-    return res.status(400).json({ message: "Invalid id" });
-  }
-
-  const parsed = UpdateInquirySchema.safeParse(req.body);
-
-  if (!parsed.success) {
-    return res.status(400).json({
-      message: "Validation error",
-      issues: parsed.error.issues,
-    });
-  }
-
-  const updated = await inquiriesService.updateInquiry(id, parsed.data, {
+  const updated = await inquiriesService.updateInquiry(id, payload, {
     artistId: req.admin!.artistId,
   });
 
@@ -105,18 +89,10 @@ export async function getInquiriesStats(req: AdminRequest, res: Response) {
 export async function deleteInquiry(req: AdminRequest, res: Response) {
   const id = parseId(req);
 
-  if (id === null || !Number.isInteger(id) || id <= 0) {
-    return res.status(400).json({
-      message: "Invalid id",
-    });
-  }
-
   const deleted = await inquiriesService.deleteInquiry(id);
 
   if (!deleted) {
-    return res.status(404).json({
-      message: "Inquiry not found",
-    });
+    throw new AppError(ERROR_CODES.INQUIRY_NOT_FOUND, 404);
   }
 
   return res.status(204).send();

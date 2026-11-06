@@ -1,12 +1,30 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   uploadArtistAvatar,
   uploadArtworkImage,
 } from "../controllers/upload.controller";
-import { uploadSingleImage } from "../middlewares/upload";
 import { deleteImage } from "../libs/cloudinary";
+import { uploadSingleImage } from "../middlewares/upload";
+import { AppError } from "../utils/AppError";
 
 const router = Router();
+
+async function deleteUploadedImage(req: Request, res: Response) {
+  const publicId = req.query.publicId;
+
+  if (typeof publicId !== "string" || !publicId.trim()) {
+    throw new AppError(
+      ERROR_CODES.PUBLIC_ID_REQUIRED,
+      400,
+      "Image ID is required",
+    );
+  }
+
+  await deleteImage(publicId);
+
+  return res.status(204).send();
+}
 
 // /api/uploads/artist-avatar
 router.post("/artist-avatar", uploadSingleImage, uploadArtistAvatar);
@@ -14,38 +32,10 @@ router.post("/artist-avatar", uploadSingleImage, uploadArtistAvatar);
 // /api/uploads/artwork-image
 router.post("/artwork-image", uploadSingleImage, uploadArtworkImage);
 
-router.delete("/artwork-image", async (req, res) => {
-  const publicImgId = req.query.publicId as string | undefined;
+// /api/uploads/artwork-image
+router.delete("/artwork-image", deleteUploadedImage);
 
-  if (!publicImgId) {
-    return res.status(400).json({ message: "publicId is required" });
-  }
-
-  try {
-    await deleteImage(publicImgId);
-    return res.status(204).send();
-  } catch (err) {
-    console.error("Error deleting Cloudinary image:", err);
-    return res
-      .status(500)
-      .json({ message: "Failed to delete Cloudinary image" });
-  }
-});
-
-router.delete("/artist-avatar", async (req, res) => {
-  const publicImgId = req.query.publicId as string | undefined;
-
-  if (!publicImgId) {
-    return res.status(400).json({ message: "publicId is required" });
-  }
-
-  try {
-    await deleteImage(publicImgId);
-    return res.status(204).send();
-  } catch (err) {
-    console.error("Error deleting artist avatar from Cloudinary:", err);
-    return res.status(500).json({ message: "Failed to delete artist avatar" });
-  }
-});
+// /api/uploads/artist-avatar
+router.delete("/artist-avatar", deleteUploadedImage);
 
 export default router;

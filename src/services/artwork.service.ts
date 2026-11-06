@@ -5,6 +5,7 @@ import {
   ItemVisibility,
   Prisma,
 } from "@prisma/client";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   ArtworkListQueryDTO,
   CreateArtworkDTO,
@@ -13,6 +14,7 @@ import {
 import { deleteImage } from "../libs/cloudinary";
 import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
 import prisma from "../prisma";
+import { AppError } from "../utils/AppError";
 
 export type ArtworkQuery = ArtworkListQueryDTO;
 
@@ -297,11 +299,7 @@ export async function createArtwork(
   const { artistId, copyrightConfirmed, ...rest } = data;
 
   if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
-    const error: any = new Error(
-      "Only global admins can manage featured artworks",
-    );
-    error.statusCode = 403;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_FEATURED_ADMIN_ONLY, 403);
   }
 
   const targetArtistId = access.artistId ?? artistId;
@@ -349,9 +347,7 @@ export async function updateArtwork(
   });
 
   if (!existing) {
-    const error: any = new Error("Artwork not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
   }
 
   const oldPublicId = existing.imagePublicId;
@@ -366,11 +362,7 @@ export async function updateArtwork(
   const category = data.category ?? existing.category;
 
   if (data.isFeatured !== undefined && access.role !== AdminRole.ADMIN) {
-    const error: any = new Error(
-      "Only global admins can manage featured artworks",
-    );
-    error.statusCode = 403;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_FEATURED_ADMIN_ONLY, 403);
   }
 
   const updateData: any = normalizeArtworkMetadata(
@@ -410,9 +402,7 @@ export async function deleteArtwork(id: number) {
   });
 
   if (!existing) {
-    const error: any = new Error("Artwork not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
   }
 
   // If Cloudinary image exists → delete remote file

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { ERROR_CODES } from "../constants/errorCodes";
 import {
   ArtworkListQuerySchema,
   createArtworkSchema,
@@ -6,6 +7,7 @@ import {
 } from "../dtos/artwork.dto";
 import { AdminRequest } from "../middlewares/requireAdmin";
 import * as artworkService from "../services/artwork.service";
+import { AppError } from "../utils/AppError";
 
 export async function getAllArtworks(req: AdminRequest, res: Response) {
   const artworks = await artworkService.getAllArtworks({
@@ -42,9 +44,7 @@ export async function getArtwork(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid art work ID");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTWORK_ID, 400);
   }
 
   const artwork = await artworkService.getArtworkById(id, {
@@ -52,9 +52,7 @@ export async function getArtwork(req: AdminRequest, res: Response) {
   });
 
   if (!artwork) {
-    const error: any = new Error("Art work not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
   }
 
   res.json(artwork);
@@ -90,17 +88,13 @@ export async function getPublishedArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid art work ID");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTWORK_ID, 400);
   }
 
   const artwork = await artworkService.getPublishedArtworkById(id);
 
   if (!artwork) {
-    const error: any = new Error("Art work not found");
-    error.statusCode = 404;
-    throw error;
+    throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
   }
 
   res.json(artwork);
@@ -122,9 +116,7 @@ export async function updateArtwork(req: AdminRequest, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid art work ID");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTWORK_ID, 400);
   }
 
   const payload = updateArtworkSchema.parse(req.body);
@@ -141,9 +133,7 @@ export async function deleteArtwork(req: Request, res: Response) {
   const id = Number(req.params.id);
 
   if (!Number.isInteger(id) || id <= 0) {
-    const error: any = new Error("Invalid art work ID");
-    error.statusCode = 400;
-    throw error;
+    throw new AppError(ERROR_CODES.INVALID_ARTWORK_ID, 400);
   }
 
   await artworkService.deleteArtwork(id);
