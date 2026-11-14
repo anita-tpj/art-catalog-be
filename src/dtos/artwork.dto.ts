@@ -10,7 +10,19 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 
-export const createArtworkSchema = z.object({
+const hasValidImagePair = (
+  url: string | undefined,
+  publicId: string | undefined,
+) => {
+  const hasUrl = url !== undefined;
+  const hasPublicId = publicId !== undefined;
+
+  return (
+    hasUrl === hasPublicId && (!hasPublicId || Boolean(url && publicId?.trim()))
+  );
+};
+
+const artworkBaseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   imageUrl: z.string().url().optional(),
@@ -34,6 +46,45 @@ export const createArtworkSchema = z.object({
   isFeatured: z.boolean().optional(),
 });
 
+export const createArtworkSchema = artworkBaseSchema.refine(
+  (data) => hasValidImagePair(data.imageUrl, data.imagePublicId),
+  {
+    message: "Image URL and public ID must be provided together",
+    path: ["imageUrl"],
+  },
+);
+
+export const updateArtworkSchema = artworkBaseSchema
+  .omit({ copyrightConfirmed: true })
+  .extend({
+    imageUrl: z.string().url().nullable().optional(),
+    imagePublicId: z.string().trim().min(1).nullable().optional(),
+  })
+  .partial()
+  .refine(
+    (data) => {
+      const { imageUrl, imagePublicId } = data;
+
+      if (imageUrl === undefined && imagePublicId === undefined) {
+        return true;
+      }
+
+      if (imageUrl === null && imagePublicId === null) {
+        return true;
+      }
+
+      return (
+        typeof imageUrl === "string" &&
+        typeof imagePublicId === "string" &&
+        imagePublicId.length > 0
+      );
+    },
+    {
+      message: "Image URL and public ID must be provided together",
+      path: ["imageUrl"],
+    },
+  );
+
 export const ArtworkListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
@@ -48,10 +99,6 @@ export const ArtworkListQuerySchema = z.object({
     .optional(),
   category: z.nativeEnum(ArtworkCategory).optional(),
 });
-
-export const updateArtworkSchema = createArtworkSchema
-  .omit({ copyrightConfirmed: true })
-  .partial();
 
 export type CreateArtworkDTO = z.infer<typeof createArtworkSchema>;
 export type UpdateArtworkDTO = z.infer<typeof updateArtworkSchema>;

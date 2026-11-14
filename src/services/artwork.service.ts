@@ -1,6 +1,8 @@
 import {
   AdminRole,
   ArtworkCategory,
+  CloudinaryImageStatus,
+  CloudinaryImageType,
   ItemStatus,
   ItemVisibility,
   Prisma,
@@ -11,10 +13,10 @@ import {
   CreateArtworkDTO,
   UpdateArtworkDTO,
 } from "../dtos/artwork.dto";
-import { deleteImage } from "../libs/cloudinary";
 import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
 import prisma from "../prisma";
 import { AppError } from "../utils/AppError";
+import { attachCloudinaryImage } from "./cloudinaryImage.service";
 
 export type ArtworkQuery = ArtworkListQueryDTO;
 
@@ -308,6 +310,8 @@ export async function createArtwork(
     throw new Error("Admin ID is required for copyright confirmation");
   }
 
+  const adminId = access.adminId;
+
   const normalizedData = normalizeArtworkMetadata(
     nullifyUndefined({ ...rest }),
     data.category,
@@ -319,11 +323,31 @@ export async function createArtwork(
       connect: { id: targetArtistId },
     },
     copyrightConfirmedAt: new Date(),
-    copyrightConfirmedById: access.adminId,
+    copyrightConfirmedById: adminId,
   };
 
-  return prisma.artwork.create({
-    data: createData,
+  return prisma.$transaction(async (tx) => {
+    if (data.imagePublicId) {
+      if (!data.imageUrl) {
+        throw new AppError(
+          ERROR_CODES.FORBIDDEN,
+          403,
+          "Artwork image URL is required",
+        );
+      }
+
+      await attachCloudinaryImage(
+        tx,
+        data.imagePublicId,
+        data.imageUrl,
+        adminId,
+        CloudinaryImageType.ARTWORK_IMAGE,
+      );
+    }
+
+    return tx.artwork.create({
+      data: createData,
+    });
   });
 }
 
@@ -350,11 +374,31 @@ export async function updateArtwork(
     throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
   }
 
+  const imageProvided =
+    data.imageUrl !== undefined || data.imagePublicId !== undefined;
+
+  const removingImage = data.imageUrl === null && data.imagePublicId === null;
+
+  if (imageProvided && !removingImage) {
+    if (!data.imageUrl || !data.imagePublicId) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        403,
+        "Image URL and public ID must be provided together",
+      );
+    }
+
+    if (data.imagePublicId === existing.imagePublicId) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        403,
+        "Existing image cannot be reassigned",
+      );
+    }
+  }
+
   const oldPublicId = existing.imagePublicId;
   const newPublicId = data.imagePublicId;
-
-  const shouldDeleteOldImage =
-    oldPublicId && newPublicId && oldPublicId !== newPublicId;
 
   // Build update payload without undefined keys
   const { artistId, ...rest } = data as any;
@@ -373,52 +417,108 @@ export async function updateArtwork(
   // Only a global admin may reassign an artwork to another artist.
   // Artist-scoped users always keep their existing owner.
   if (!access.artistId && artistId !== undefined) {
-    updateData.artist = { connect: { id: artistId } };
+    updateData.artistId = artistId;
   }
 
-  // First update the DB successfully
-  const updatedArtwork = await prisma.artwork.update({
-    where: { id },
-    data: updateData,
-  });
+  // Atomically update artwork and Cloudinary image tracking
+  return prisma.$transaction(async (tx) => {
+    const imageChanged =
+      newPublicId !== undefined && newPublicId !== oldPublicId;
 
-  // Only after the DB update succeeds, delete the previous Cloudinary image
-  if (shouldDeleteOldImage) {
-    try {
-      await deleteImage(oldPublicId);
-    } catch (err) {
-      console.error("Failed to delete previous artwork Cloudinary image:", err);
+    if (imageChanged && newPublicId) {
+      if (!access.adminId) {
+        throw new AppError(
+          ERROR_CODES.UNAUTHORIZED,
+          401,
+          "Admin ID is required",
+        );
+      }
+
+      if (!data.imageUrl) {
+        throw new AppError(
+          ERROR_CODES.FORBIDDEN,
+          403,
+          "Artwork image URL is required",
+        );
+      }
+
+      await attachCloudinaryImage(
+        tx,
+        newPublicId,
+        data.imageUrl,
+        access.adminId,
+        CloudinaryImageType.ARTWORK_IMAGE,
+      );
     }
-  }
 
-  return updatedArtwork;
+    const result = await tx.artwork.updateMany({
+      where: {
+        id,
+        imagePublicId: oldPublicId,
+        ...(access.artistId ? { artistId: access.artistId } : {}),
+      },
+      data: updateData,
+    });
+
+    if (result.count !== 1) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        409,
+        "Artwork was modified by another request. Please reload and try again.",
+      );
+    }
+
+    const updatedArtwork = await tx.artwork.findUniqueOrThrow({
+      where: { id },
+    });
+
+    if (imageProvided && oldPublicId && (imageChanged || removingImage)) {
+      await tx.cloudinaryImage.updateMany({
+        where: {
+          publicId: oldPublicId,
+          resourceType: CloudinaryImageType.ARTWORK_IMAGE,
+          status: CloudinaryImageStatus.ATTACHED,
+        },
+        data: {
+          status: CloudinaryImageStatus.PENDING_DELETE,
+          nextRetryAt: new Date(),
+        },
+      });
+    }
+
+    return updatedArtwork;
+  });
 }
 
 export async function deleteArtwork(id: number) {
-  // Fetch artwork image publicId before deleting DB record
-  const existing = await prisma.artwork.findUnique({
-    where: { id },
-    select: { imagePublicId: true },
-  });
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.artwork.findUnique({
+      where: { id },
+      select: { imagePublicId: true },
+    });
 
-  if (!existing) {
-    throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
-  }
-
-  // If Cloudinary image exists → delete remote file
-  if (existing.imagePublicId) {
-    try {
-      await deleteImage(existing.imagePublicId);
-    } catch (err) {
-      console.error(
-        "Failed to delete Cloudinary image on artwork delete:",
-        err,
-      );
+    if (!existing) {
+      throw new AppError(ERROR_CODES.ARTWORK_NOT_FOUND, 404);
     }
-  }
 
-  // Finally delete artwork from DB
-  return prisma.artwork.delete({
-    where: { id },
+    const deletedArtwork = await tx.artwork.delete({
+      where: { id },
+    });
+
+    if (existing.imagePublicId) {
+      await tx.cloudinaryImage.updateMany({
+        where: {
+          publicId: existing.imagePublicId,
+          resourceType: CloudinaryImageType.ARTWORK_IMAGE,
+          status: CloudinaryImageStatus.ATTACHED,
+        },
+        data: {
+          status: CloudinaryImageStatus.PENDING_DELETE,
+          nextRetryAt: new Date(),
+        },
+      });
+    }
+
+    return deletedArtwork;
   });
 }

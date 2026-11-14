@@ -1,7 +1,10 @@
+import { CloudinaryImageType } from "@prisma/client";
 import type { UploadApiResponse } from "cloudinary";
-import { Request, Response } from "express";
+import { Response } from "express";
 import { ERROR_CODES } from "../constants/errorCodes";
-import cloudinary from "../libs/cloudinary";
+import cloudinary, { deleteImage } from "../libs/cloudinary";
+import type { AdminRequest } from "../middlewares/requireAdmin";
+import prisma from "../prisma";
 import { AppError } from "../utils/AppError";
 
 async function uploadCloudinaryImage(
@@ -44,7 +47,7 @@ async function uploadCloudinaryImage(
 /**
  * Upload Artist Avatar
  */
-export async function uploadArtistAvatar(req: Request, res: Response) {
+export async function uploadArtistAvatar(req: AdminRequest, res: Response) {
   const file = req.file;
 
   if (!file) {
@@ -54,13 +57,37 @@ export async function uploadArtistAvatar(req: Request, res: Response) {
   const folder = process.env.CLOUDINARY_ARTISTS_FOLDER!;
   const result = await uploadCloudinaryImage(file, folder);
 
+  try {
+    await prisma.cloudinaryImage.create({
+      data: {
+        publicId: result.publicId,
+        url: result.url,
+        uploadedById: req.admin!.id,
+        resourceType: CloudinaryImageType.ARTIST_AVATAR,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to register Cloudinary artist avatar:", error);
+
+    try {
+      await deleteImage(result.publicId);
+    } catch (cleanupError) {
+      console.error(
+        "Failed to clean up unregistered Cloudinary artist avatar:",
+        cleanupError,
+      );
+    }
+
+    throw error;
+  }
+
   return res.status(201).json(result);
 }
 
 /**
  * Upload Artwork Image
  */
-export async function uploadArtworkImage(req: Request, res: Response) {
+export async function uploadArtworkImage(req: AdminRequest, res: Response) {
   const file = req.file;
 
   if (!file) {
@@ -69,6 +96,30 @@ export async function uploadArtworkImage(req: Request, res: Response) {
 
   const folder = process.env.CLOUDINARY_ARTWORKS_FOLDER!;
   const result = await uploadCloudinaryImage(file, folder);
+
+  try {
+    await prisma.cloudinaryImage.create({
+      data: {
+        publicId: result.publicId,
+        url: result.url,
+        uploadedById: req.admin!.id,
+        resourceType: CloudinaryImageType.ARTWORK_IMAGE,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to register Cloudinary artwork image:", error);
+
+    try {
+      await deleteImage(result.publicId);
+    } catch (cleanupError) {
+      console.error(
+        "Failed to clean up unregistered Cloudinary artwork image:",
+        cleanupError,
+      );
+    }
+
+    throw error;
+  }
 
   return res.status(201).json(result);
 }
