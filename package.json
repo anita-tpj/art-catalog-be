@@ -9,9 +9,11 @@
     "start": "node dist/app.js",
     "prisma:seed": "tsx prisma/seed.ts",
     "retention:dry-run": "node dist/jobs/dataRetention.job.js",
-    "retention:cleanup": "RETENTION_DRY_RUN=false node dist/jobs/dataRetention.job.js"
+    "retention:cleanup": "RETENTION_DRY_RUN=false node dist/jobs/dataRetention.job.js",
+    "cloudinary:maintenance": "node dist/scripts/runCloudinaryCleanup.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1169.0",
     "@prisma/client": "6.19.3",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.8.0",
@@ -23,6 +25,7 @@
     "express-rate-limit": "^8.7.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "pg": "^8.23.1",
     "resend": "^6.31.0",
     "winston": "^3.18.3",
     "zod": "^4.1.12"
@@ -35,6 +38,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^20.19.34",
+    "@types/pg": "^8.23.1",
     "prisma": "6.19.3",
     "tsx": "^4.23.15",
     "typescript": "^5.4.0"

@@ -120,6 +120,7 @@ export async function createArtist(req: AdminRequest, res: Response) {
 
   const artist = await artistService.createArtist(payload, {
     artistId: req.admin!.artistId,
+    adminId: req.admin!.id,
     role: req.admin!.role,
   });
 
@@ -137,6 +138,7 @@ export async function updateArtist(req: AdminRequest, res: Response) {
 
   const updated = await artistService.updateArtist(id, payload, {
     artistId: req.admin!.artistId,
+    adminId: req.admin!.id,
     role: req.admin!.role,
   });
 

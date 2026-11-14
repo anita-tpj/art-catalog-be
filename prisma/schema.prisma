@@ -241,3 +241,38 @@ enum ArtworkOrigin {
   BASED_ON_REFERENCE
   REPRODUCTION
 }
+
+enum CloudinaryImageStatus {
+  TEMPORARY
+  ATTACHED
+  DELETING
+  PENDING_DELETE
+  DELETED
+}
+
+enum CloudinaryImageType {
+  ARTIST_AVATAR
+  ARTWORK_IMAGE
+}
+
+model CloudinaryImage {
+  id           String                @id @default(cuid())
+  publicId     String                @unique
+  url          String
+  uploadedById String?
+  resourceType CloudinaryImageType
+  status       CloudinaryImageStatus @default(TEMPORARY)
+
+  deleteAttempts  Int       @default(0)
+  lastDeleteError String?
+  nextRetryAt     DateTime?
+
+  deletionLeaseToken     String?
+  deletionLeaseExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@index([uploadedById])
+}

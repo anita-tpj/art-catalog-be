@@ -123,6 +123,7 @@ export async function updateArtwork(req: AdminRequest, res: Response) {
 
   const updated = await artworkService.updateArtwork(id, payload, {
     artistId: req.admin!.artistId,
+    adminId: req.admin!.id,
     role: req.admin!.role,
   });
 

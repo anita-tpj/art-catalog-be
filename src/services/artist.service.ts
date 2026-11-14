@@ -1,19 +1,27 @@
-import { AdminRole, ItemStatus, ItemVisibility, Prisma } from "@prisma/client";
+import {
+  AdminRole,
+  CloudinaryImageStatus,
+  CloudinaryImageType,
+  ItemStatus,
+  ItemVisibility,
+  Prisma,
+} from "@prisma/client";
 import { ERROR_CODES } from "../constants/errorCodes";
 import {
   ArtistListQueryDTO,
   CreateArtistDTO,
   UpdateArtistDTO,
 } from "../dtos/artist.dto";
-import { deleteImage } from "../libs/cloudinary";
 import { nullifyUndefined, stripUndefined } from "../libs/prismaData";
 import prisma from "../prisma";
 import { AppError } from "../utils/AppError";
+import { attachCloudinaryImage } from "./cloudinaryImage.service";
 
 export type ArtistQuery = ArtistListQueryDTO;
 
 export type ArtistAccess = {
   artistId: number | null;
+  adminId?: string;
   role?: AdminRole;
 };
 
@@ -253,8 +261,36 @@ export async function createArtist(
   }) as Prisma.ArtistCreateInput;
 
   try {
-    return await prisma.artist.create({
-      data: createData,
+    return await prisma.$transaction(async (tx) => {
+      if (data.avatarPublicId) {
+        if (!access.adminId) {
+          throw new AppError(
+            ERROR_CODES.UNAUTHORIZED,
+            401,
+            "Admin ID is required",
+          );
+        }
+
+        if (!data.avatarUrl) {
+          throw new AppError(
+            ERROR_CODES.FORBIDDEN,
+            403,
+            "Avatar URL is required",
+          );
+        }
+
+        await attachCloudinaryImage(
+          tx,
+          data.avatarPublicId,
+          data.avatarUrl,
+          access.adminId,
+          CloudinaryImageType.ARTIST_AVATAR,
+        );
+      }
+
+      return tx.artist.create({
+        data: createData,
+      });
     });
   } catch (err) {
     if (
@@ -286,7 +322,7 @@ export async function updateArtist(
     throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
   }
 
-  // Fetch current avatarPublicId to decide if we need to delete old image
+  // Fetch current artist data to validate changes and track avatar replacement
   const existing = await prisma.artist.findUnique({
     where: { id },
     select: {
@@ -298,6 +334,30 @@ export async function updateArtist(
 
   if (!existing) {
     throw new AppError(ERROR_CODES.ARTIST_NOT_FOUND, 404);
+  }
+
+  const avatarProvided =
+    data.avatarUrl !== undefined || data.avatarPublicId !== undefined;
+
+  const removingAvatar =
+    data.avatarUrl === null && data.avatarPublicId === null;
+
+  if (avatarProvided && !removingAvatar) {
+    if (!data.avatarUrl || !data.avatarPublicId) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        403,
+        "Avatar URL and public ID must be provided together",
+      );
+    }
+
+    if (data.avatarPublicId === existing.avatarPublicId) {
+      throw new AppError(
+        ERROR_CODES.FORBIDDEN,
+        403,
+        "Existing avatar cannot be reassigned",
+      );
+    }
   }
 
   if (
@@ -321,28 +381,79 @@ export async function updateArtist(
     requireSlugForPublish(nextSlug);
   }
 
-  const shouldDeleteOldAvatar =
-    existing.avatarPublicId &&
-    data.avatarPublicId &&
-    existing.avatarPublicId !== data.avatarPublicId;
-
-  if (shouldDeleteOldAvatar && existing.avatarPublicId != null) {
-    try {
-      await deleteImage(existing.avatarPublicId);
-    } catch (err) {
-      console.error("Error deleting old Cloudinary avatar:", err);
-    }
-  }
-
   const updateData = stripUndefined({
     ...data,
     ...(isFirstPublish ? { slugLocked: true } : {}),
   }) as Prisma.ArtistUpdateInput;
 
   try {
-    return await prisma.artist.update({
-      where: { id },
-      data: updateData,
+    return await prisma.$transaction(async (tx) => {
+      const oldPublicId = existing.avatarPublicId;
+      const newPublicId = data.avatarPublicId;
+
+      const imageChanged =
+        newPublicId !== undefined && newPublicId !== oldPublicId;
+
+      if (imageChanged && newPublicId) {
+        if (!access.adminId) {
+          throw new AppError(
+            ERROR_CODES.UNAUTHORIZED,
+            401,
+            "Admin ID is required",
+          );
+        }
+
+        if (!data.avatarUrl) {
+          throw new AppError(
+            ERROR_CODES.FORBIDDEN,
+            403,
+            "Avatar URL is required",
+          );
+        }
+
+        await attachCloudinaryImage(
+          tx,
+          newPublicId,
+          data.avatarUrl,
+          access.adminId,
+          CloudinaryImageType.ARTIST_AVATAR,
+        );
+      }
+
+      const result = await tx.artist.updateMany({
+        where: {
+          id,
+          avatarPublicId: oldPublicId,
+        },
+        data: updateData,
+      });
+
+      if (result.count !== 1) {
+        throw new AppError(
+          ERROR_CODES.FORBIDDEN,
+          409,
+          "Artist was modified by another request. Please reload and try again.",
+        );
+      }
+
+      const updatedArtist = await tx.artist.findUniqueOrThrow({
+        where: { id },
+      });
+      if (avatarProvided && oldPublicId && (imageChanged || removingAvatar)) {
+        await tx.cloudinaryImage.updateMany({
+          where: {
+            publicId: oldPublicId,
+            resourceType: CloudinaryImageType.ARTIST_AVATAR,
+            status: CloudinaryImageStatus.ATTACHED,
+          },
+          data: {
+            status: CloudinaryImageStatus.PENDING_DELETE,
+            nextRetryAt: new Date(),
+          },
+        });
+      }
+
+      return updatedArtist;
     });
   } catch (err) {
     if (
@@ -357,7 +468,7 @@ export async function updateArtist(
 }
 
 export async function deleteArtist(id: number) {
-  const deletedArtist = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const artist = await tx.artist.findUnique({
       where: { id },
       select: {
@@ -406,21 +517,24 @@ export async function deleteArtist(id: number) {
       where: { artistId: id },
     });
 
-    return tx.artist.delete({
+    const deletedArtist = await tx.artist.delete({
       where: { id },
     });
-  });
 
-  if (deletedArtist.avatarPublicId) {
-    try {
-      await deleteImage(deletedArtist.avatarPublicId);
-    } catch (error) {
-      console.error(
-        "Error deleting Cloudinary avatar on artist delete:",
-        error,
-      );
+    if (artist.avatarPublicId) {
+      await tx.cloudinaryImage.updateMany({
+        where: {
+          publicId: artist.avatarPublicId,
+          resourceType: CloudinaryImageType.ARTIST_AVATAR,
+          status: CloudinaryImageStatus.ATTACHED,
+        },
+        data: {
+          status: CloudinaryImageStatus.PENDING_DELETE,
+          nextRetryAt: new Date(),
+        },
+      });
     }
-  }
 
-  return deletedArtist;
+    return deletedArtist;
+  });
 }
